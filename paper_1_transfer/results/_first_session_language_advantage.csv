@@ -1,0 +1,4 @@
+"model","contrast","median","ci_low","ci_high","pd"
+"accuracy_gender_agreement","gram_x_language_at_first_session",0.183270795056002,-0.118545499164383,0.493050576439586,0.8863125
+"accuracy_differential_object_marking","gram_x_language_at_first_session",0.0456068116595437,-0.3811667887876,0.478213859664459,0.5835625
+"accuracy_verb_object_number_agreement","gram_x_language_at_first_session",-0.018437935285804,-0.371797995997928,0.329935145431261,0.54065625
