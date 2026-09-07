@@ -213,6 +213,7 @@ suppressPackageStartupMessages({
   # les_theme(), les_div, the number formatters, .read_csv_if(), prov(), flow_n() and
   # pstat(), shared with Paper 2 so both manuscripts report by one set of rules.
   source(here::here("_shared", "R", "06_manuscript_helpers.R"))
+  source(here::here("_shared", "R", "07_task_durations.R"))
   library(dplyr)
   library(ggplot2)
   has_knitr <- requireNamespace("knitr", quietly = TRUE)
@@ -356,6 +357,8 @@ flow_tbl    <- .read_csv_if(paper1_results("_sample_flow.csv"))
 parts_tbl   <- .read_csv_if(paper1_results("_participants.csv"))
 erp_ret_tbl <- .read_csv_if(paper1_results("_erp_trial_retention.csv"))
 gate_tbl    <- .read_csv_if(paper1_results("_training_gate_flow.csv"))
+task_duration_home <- .read_csv_if(paper1_results("_task_durations_home.csv"))
+task_duration_lab  <- .read_csv_if(paper1_results("_task_durations_lab.csv"))
 # Three further descriptives that were typed into the Method until the extraction
 # scripts were extended to write them (00_extract_participants.R,
 # 00c_extract_erp_retention.R and 02_extract_accuracy.R). Each sentence below prints a
@@ -1688,7 +1691,10 @@ experimenter-paced. Nothing in the sentence stream depended on the participant, 
 condition difference in reading speed cannot shift the epoch. The grammaticality judgement
 was requested only after the final word of the sentence, never during it, and was made with
 a two-button response (left = grammatical, right = violation). No motor response therefore
-fell inside the analysed epoch.
+fell inside the analysed epoch. Participants were instructed to minimise movement and
+blinking, especially during the presentation of words. During pauses in these long
+sessions, experimenters monitored the signal and intervened when necessary to maintain
+low electrode impedance and acceptable signal quality.
 
 This timing has one consequence for the late window. The raw presentation logs record
 all `r rsvp_tim("n_trials", big = TRUE)` critical-word trials, a census taken before any
@@ -1758,6 +1764,33 @@ the four mis-filtered Session 3 datasets contribute to the Session 3 means.
 loss between the compared conditions would make a grammaticality effect partly a difference
 in measurement precision and only partly one in brain response, so retention is reported per
 condition, and the two prove effectively equal.
+
+The observed elapsed duration of each home task and of each phase of the laboratory
+sessions is shown in @fig-home-task-duration and @fig-lab-phase-duration. These are
+descriptive timing checks, not additional outcomes: home-task duration runs from the
+first to the last Gorilla event for each participant and task, whereas lab-phase duration
+uses the OpenSesame phase markers and the final event in a phase when the next phase was
+recorded in a separate export.
+`r les_task_duration_median_text(task_duration_home, task_duration_lab)`
+
+```{r}
+#| label: fig-home-task-duration
+#| fig-cap: "Duration of the Home Cognitive Tasks by Session"
+#| apa-note: "Each box summarises the distribution across participants of elapsed time from the first to the last raw Gorilla event for one task and session; the centre line is the median, the box spans the interquartile range, and whiskers extend to 1.5 times the interquartile range. Sessions 1 and 5 are baseline and post-training, respectively. Durations therefore include instructions, practice and test material when those events are present in the export. The ordinate is logarithmic because five exports contain multi-hour idle gaps; those observations remain as outliers. Participants without a linked enrolled-participant key are excluded."
+#| fig-width: 6.5
+#| fig-height: 2.9
+les_task_duration_home_plot(task_duration_home)
+```
+
+```{r}
+#| label: fig-lab-phase-duration
+#| fig-cap: "Duration of the Laboratory-Session Phases"
+#| apa-note: "Each box summarises the distribution across participants of elapsed time in one laboratory-session phase and session; the centre line is the median, the box spans the interquartile range, and whiskers extend to 1.5 times the interquartile range. Phase duration is measured between the recorded phase-start markers, or from a phase start to the last phase-specific event when the next phase was exported separately. Sessions 2, 3 and 4 are training sessions and Session 6 is the retention session."
+#| fig-width: 6.5
+#| fig-height: 3.0
+les_task_duration_lab_plot(task_duration_lab)
+```
+
 Averaged over properties and sessions, `r ret_by_gram("Grammatical")` trials were retained
 on grammatical trials and
 `r ret_by_gram("Ungrammatical")` on ungrammatical trials, a difference of
@@ -2208,11 +2241,16 @@ data are not analysed here. The findings therefore speak to
 first-language-Norwegian learners, and generalisation to the other registered
 populations is an open question.
 
-Following the preregistered protocol, in each grammar session, participants had to
-score above 80% on the post-training behavioural test (with a second attempt allowed)
-before proceeding to the EEG experiment. This performance threshold is both an
-inclusion criterion and a performance-conditional missingness mechanism, since it
-conditions which participant-sessions contribute EEG and behaviour. Its effect is
+The preregistered protocol required participants to score above 80% on the post-training
+behavioural test in each grammar session before proceeding to the EEG experiment. After
+a few participants had been tested, we recognised that this criterion was too strict and
+modified the procedure: when the first test score was below 80%, pretraining, training
+and the test were repeated; after the second attempt, participants proceeded to the
+experiment regardless of their score. Participants were shown their percentage correct
+at the end of each test attempt. The 80% threshold therefore describes the first-attempt
+gate, not a requirement imposed on the second attempt. This performance threshold is
+both an inclusion criterion and a performance-conditional missingness mechanism, since
+it conditions which participant-sessions contribute EEG and behaviour. Its effect is
 therefore folded into the attendance counts in @fig-flow, which record who contributed
 data at each stage but not why. Per-session gate outcomes are not reported. They can only
 be reconstructed from the terminal pass flag in the training logs, and that reconstruction
