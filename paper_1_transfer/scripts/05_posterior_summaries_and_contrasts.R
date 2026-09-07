@@ -86,28 +86,36 @@ suppressPackageStartupMessages({
 
 # --- (1), (2) and (4) Pool the per-model artefacts ----------------------------
 pool_artefacts <- function() {
-  conv_files <- list.files(paper1_results(), pattern = "_convergence\\.rds$", full.names = TRUE)
-  summ_files <- list.files(paper1_results(), pattern = "_summary\\.rds$",     full.names = TRUE)
-  meta_files <- list.files(paper1_results(), pattern = "_fitmeta\\.rds$",     full.names = TRUE)
+  # Byte-order sort, so the row order of the pooled CSVs does not depend on the collation
+  # of the machine that ran the pooling.
+  .ls <- function(pattern) {
+    sort(list.files(paper1_results(), pattern = pattern, full.names = TRUE), method = "radix")
+  }
+  conv_files <- .ls("_convergence\\.rds$")
+  summ_files <- .ls("_summary\\.rds$")
+  meta_files <- .ls("_fitmeta\\.rds$")
 
   if (length(conv_files)) {
     # Take the model id from the FILE NAME rather than from inside the artefact, exactly as
-    # the posterior summaries are pooled below. The cache tag (_itemslope, _weakprior,
-    # _weakprior_itemslope, _retfree) lives only in the name, so binding the stored `model`
-    # column alone produced several indistinguishable rows per ERP cell, with no way to
-    # tell a maximal fit from a base one, or the informative prior set from the weak
-    # baseline. The table in the manuscript is captioned as covering all fitted models, so
-    # those rows have to be identifiable.
+    # the posterior summaries are pooled below. The cache tags (_keepmisfiltered,
+    # _weakprior, _itemslope, _retfree, composed in that order) live only in the name, so
+    # binding the stored `model` column alone produced several indistinguishable rows per
+    # ERP cell, with no way to tell a maximal fit from a base one, or the informative prior
+    # set from the weak baseline. The table in the manuscript is captioned as covering all
+    # fitted models, so those rows have to be identifiable.
     conv <- dplyr::bind_rows(lapply(conv_files, function(f) {
       d <- readRDS(f)
       d$model <- sub("_convergence\\.rds$", "", basename(f))
       d
     }))
-    # The tag is a suffix, and _itemslope is always last when both are present.
-    conv$structure     <- ifelse(grepl("_itemslope$", conv$model), "maximal", "base")
-    conv$prior_variant <- ifelse(grepl("_weakprior", conv$model), "weak", "informative")
+    # Tags compose as <cell>_itemslope_retfree, so the structure test must allow the
+    # retention-free suffix, or every maximal retention-free fit is classified as base.
+    conv$structure      <- ifelse(grepl("_itemslope(_retfree)?$", conv$model), "maximal", "base")
+    conv$retention_free <- grepl("_retfree$", conv$model)
+    conv$prior_variant  <- ifelse(grepl("_weakprior", conv$model), "weak", "informative")
     utils::write.csv(conv, paper1_results("_pooled_convergence.csv"), row.names = FALSE)
-    message("[pool] convergence: ", sum(conv$passed, na.rm = TRUE), "/", nrow(conv), " models passed")
+    message("[pool] convergence: ", sum(conv$passed, na.rm = TRUE), "/", nrow(conv),
+            " models passed")
   }
   if (length(summ_files)) {
     summ <- dplyr::bind_rows(lapply(summ_files, function(f) {
@@ -127,8 +135,11 @@ pool_artefacts <- function() {
       # the `structure` column existed are classified the same way as recent ones.
       # This overwrites the fit-time value rather than only filling it in where it is
       # missing, so a record's structure always follows its cache tag.
-      d$prior_variant <- if (grepl("_weakprior", b)) "weak" else "informative"
-      d$structure     <- if (grepl("_itemslope_fitmeta\\.rds$", b)) "maximal" else "base"
+      d$prior_variant  <- if (grepl("_weakprior", b)) "weak" else "informative"
+      d$structure      <- if (grepl("_itemslope(_retfree)?_fitmeta\\.rds$", b)) "maximal"
+                          else "base"
+      d$retention_free <- grepl("_retfree_fitmeta\\.rds$", b)
+      d$model_tag      <- sub("_fitmeta\\.rds$", "", b)
       d
     }))
     utils::write.csv(meta, paper1_results("_pooled_fit_metadata.csv"), row.names = FALSE)
@@ -263,32 +274,46 @@ collect_retention <- function() {
   # primary, so its contrasts must exist alongside the simpler ones rather than the
   # table silently covering only whichever structure happened to be fitted first.
   grid <- les_p1_erp_grid()
-  # Tags are appended by 03_fit_brms_erp.R in the order prior -> item -> retention
-  # (cell_tag <- paste0(cell_id, les_prior_tag(), les_p1_item_tag(),
-  # les_p1_retention_tag())), so a maximal-structure retention-free fit is
-  # "<cell>_itemslope_retfree". The retention-free variants must be enumerated
-  # here or their contrasts never reach _retention_contrasts.csv and the
-  # manuscript keeps printing its pending marker with nothing to show why.
-  variants <- c("", "_itemslope", "_weakprior", "_weakprior_itemslope",
-                "_retfree", "_itemslope_retfree")
+  # Tags are appended by 03_fit_brms_erp.R in the order mis-filter -> prior -> item ->
+  # retention (cell_tag <- paste0(cell_id, les_p1_misfiltered_tag(), les_prior_tag(),
+  # les_p1_item_tag(), les_p1_retention_tag())), so a maximal-structure retention-free
+  # fit is "<cell>_itemslope_retfree" and its mis-filter-retained twin
+  # "<cell>_keepmisfiltered_itemslope_retfree". Every variant must be enumerated here or
+  # its contrasts never reach _retention_contrasts.csv and the manuscript keeps printing
+  # its pending marker with nothing to show why.
+  base_variants <- c("", "_itemslope", "_weakprior", "_weakprior_itemslope",
+                     "_retfree", "_itemslope_retfree")
+  variants <- c(base_variants, paste0("_keepmisfiltered", base_variants))
   for (i in seq_len(nrow(grid))) {
-    fdat <- les_p1_cell_rds(grid$property[i], grid$window[i], grid$macroregion[i])
-    if (!file.exists(fdat)) next
-    dat <- readRDS(fdat)
+    cell <- grid$cell_id[i]
+    # z4 and z6 are read off the data each fit was computed from, so the mis-filter-
+    # retained fits are paired with their own derived file (02 and 01 write those under
+    # the tag; see les_p1_cell_rds() in _config.R) and never with the reported data.
+    fdat <- c(reported        = les_p1_cell_rds(grid$property[i], grid$window[i],
+                                                grid$macroregion[i]),
+              keepmisfiltered = paper1_derived(paste0(cell, "_keepmisfiltered.rds")))
+    dat <- list()
     for (v in variants) {
-      mid  <- paste0(grid$cell_id[i], v)
+      mid  <- paste0(cell, v)
       ffit <- paper1_results(paste0(mid, ".rds"))
-      if (file.exists(ffit)) out[[mid]] <- retention_contrast(readRDS(ffit), dat, mid)
+      if (!file.exists(ffit)) next
+      key <- if (startsWith(v, "_keepmisfiltered")) "keepmisfiltered" else "reported"
+      if (!file.exists(fdat[[key]])) next
+      if (is.null(dat[[key]])) dat[[key]] <- readRDS(fdat[[key]])
+      out[[mid]] <- retention_contrast(readRDS(ffit), dat[[key]], mid)
     }
   }
 
-  # Accuracy models
+  # Accuracy models, reported and with the diversity covariate (LES_P1_ACC_DIVERSITY=1),
+  # each paired with the derived file 02 wrote for it.
   for (p in names(LES_P1_PROPERTIES)) {
-    mid  <- paste0("accuracy_", p)
-    ffit <- paper1_results(paste0(mid, ".rds"))
-    fdat <- paper1_derived(paste0("accuracy_", p, ".rds"))
-    if (file.exists(ffit) && file.exists(fdat)) {
-      out[[mid]] <- retention_contrast(readRDS(ffit), readRDS(fdat), mid)
+    for (tag in c("", "_diversity")) {
+      mid  <- paste0("accuracy_", p, tag)
+      ffit <- paper1_results(paste0(mid, ".rds"))
+      fdat <- paper1_derived(paste0("accuracy_", p, tag, ".rds"))
+      if (file.exists(ffit) && file.exists(fdat)) {
+        out[[mid]] <- retention_contrast(readRDS(ffit), readRDS(fdat), mid)
+      }
     }
   }
 
@@ -316,20 +341,22 @@ collect_retention <- function() {
 first_session_advantage <- function() {
   out <- list()
   for (p in names(LES_P1_PROPERTIES)) {
-    mid  <- paste0("accuracy_", p)
-    ffit <- paper1_results(paste0(mid, ".rds"))
-    fdat <- paper1_derived(paste0("accuracy_", p, ".rds"))
-    if (!file.exists(ffit) || !file.exists(fdat)) next
-    fit <- readRDS(ffit); dat <- readRDS(fdat)
-    draws <- posterior::as_draws_df(fit)
-    b_gl  <- draws[["b_z_recoded_grammaticality:z_recoded_mini_language"]]
-    b_gsl <- draws[["b_z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language"]]
-    if (is.null(b_gl) || is.null(b_gsl)) next
-    first_code <- min(dat$recoded_session, na.rm = TRUE)
-    z_first <- .les_zval(dat, "recoded_session", "z_recoded_session", first_code)
-    if (is.na(z_first)) next
-    out[[mid]] <- cbind(model = mid, contrast = "gram_x_language_at_first_session",
-                        .les_summarise_draws(b_gl + z_first * b_gsl))
+    for (tag in c("", "_diversity")) {
+      mid  <- paste0("accuracy_", p, tag)
+      ffit <- paper1_results(paste0(mid, ".rds"))
+      fdat <- paper1_derived(paste0("accuracy_", p, tag, ".rds"))
+      if (!file.exists(ffit) || !file.exists(fdat)) next
+      fit <- readRDS(ffit); dat <- readRDS(fdat)
+      draws <- posterior::as_draws_df(fit)
+      b_gl  <- draws[["b_z_recoded_grammaticality:z_recoded_mini_language"]]
+      b_gsl <- draws[["b_z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language"]]
+      if (is.null(b_gl) || is.null(b_gsl)) next
+      first_code <- min(dat$recoded_session, na.rm = TRUE)
+      z_first <- .les_zval(dat, "recoded_session", "z_recoded_session", first_code)
+      if (is.na(z_first)) next
+      out[[mid]] <- cbind(model = mid, contrast = "gram_x_language_at_first_session",
+                          .les_summarise_draws(b_gl + z_first * b_gsl))
+    }
   }
   res <- do.call(rbind, out)
   if (!is.null(res)) {
@@ -355,20 +382,36 @@ collect_prior_sensitivity <- function() {
   meta_path <- paper1_results("_pooled_fit_metadata.csv")
   meta <- if (file.exists(meta_path)) utils::read.csv(meta_path, stringsAsFactors = FALSE) else NULL
 
-  # Each entry is (informative id, weak id). The ERP cells appear twice, once per
-  # random-effect structure, because the manuscript reports a prior-sensitivity figure
-  # for whichever structure is primary and the two must not be pooled: they are
-  # different models, and a shift computed across them would confound prior with
-  # structure exactly as the pre-exclusion comparison confounded prior with sample.
+  # Each entry is (informative id, weak id), named by the informative id. The ERP cells
+  # appear once per random-effect structure, because the manuscript reports a
+  # prior-sensitivity figure for whichever structure is primary and the two must not be
+  # pooled: they are different models, and a shift computed across them would confound
+  # prior with structure exactly as the pre-exclusion comparison confounded prior with
+  # sample. The same holds for the retention-free, mis-filter-retained and
+  # diversity-covariate variants, which are paired only with a weak-prior refit carrying
+  # the same tags. The prior tag sits between the mis-filter tag and the structure tags
+  # (see cell_tag in 03_fit_brms_erp.R), which is why the weak id is composed from its
+  # parts.
   cells <- les_p1_erp_grid()$cell_id
+  erp_pairs <- function(mis = "", item = "", ret = "") {
+    ids <- paste0(cells, mis, item, ret)
+    stats::setNames(lapply(cells, function(c) {
+      c(paste0(c, mis, item, ret), paste0(c, mis, "_weakprior", item, ret))
+    }), ids)
+  }
+  acc_pairs <- function(tag = "") {
+    ids <- paste0("accuracy_", names(LES_P1_PROPERTIES), tag)
+    stats::setNames(lapply(ids, function(a) c(a, paste0(a, "_weakprior"))), ids)
+  }
   pairs <- c(
-    stats::setNames(lapply(cells, function(c) c(c, paste0(c, "_weakprior"))), cells),
-    stats::setNames(lapply(cells, function(c) c(paste0(c, "_itemslope"),
-                                                paste0(c, "_weakprior_itemslope"))),
-                    paste0(cells, "_itemslope")),
-    stats::setNames(lapply(paste0("accuracy_", names(LES_P1_PROPERTIES)),
-                           function(a) c(a, paste0(a, "_weakprior"))),
-                    paste0("accuracy_", names(LES_P1_PROPERTIES)))
+    erp_pairs(),                                             # base structure
+    erp_pairs(item = "_itemslope"),                          # maximal structure
+    erp_pairs(item = "_itemslope", ret = "_retfree"),        # maximal, retention-free
+    erp_pairs(mis = "_keepmisfiltered"),
+    erp_pairs(mis = "_keepmisfiltered", item = "_itemslope"),
+    erp_pairs(mis = "_keepmisfiltered", item = "_itemslope", ret = "_retfree"),
+    acc_pairs(),
+    acc_pairs("_diversity")
   )
   out <- list()
   for (id in names(pairs)) {
@@ -378,15 +421,22 @@ collect_prior_sensitivity <- function() {
     if (!file.exists(inf_f) || !file.exists(weak_f)) next
 
     # Same-data check: compare the two fits' recorded sample sizes where available.
-    # Keyed on structure as well as prior set, since base and maximal fits share a
-    # model id and would otherwise match two rows each and skip the check.
-    struct <- if (grepl("_itemslope$", id)) "maximal" else "base"
-    bare   <- sub("_itemslope$", "", id)
+    # The fit-time record carries the model id without the structure and retention tags
+    # (03 records paste0(cell_id, les_p1_misfiltered_tag()); 04 records the accuracy id
+    # with its diversity tag), so the lookup is keyed on the bare id together with the
+    # structure and, where the pooled table carries it, the retention_free column that
+    # pool_artefacts() derives from the file name. Base and maximal fits, and reported and
+    # retention-free fits, share a bare id and would otherwise match two rows each and
+    # skip the check.
+    struct <- if (grepl("_itemslope(_retfree)?$", id)) "maximal" else "base"
+    bare   <- sub("(_itemslope)?(_retfree)?$", "", id)
     if (!is.null(meta) && "structure" %in% names(meta)) {
-      n_inf  <- meta$n_obs[meta$model == bare & meta$prior_variant == "informative" &
-                           meta$structure == struct]
-      n_weak <- meta$n_obs[meta$model == bare & meta$prior_variant == "weak" &
-                           meta$structure == struct]
+      same <- meta$model == bare & meta$structure == struct
+      if ("retention_free" %in% names(meta)) {
+        same <- same & (meta$retention_free %in% grepl("_retfree$", id))
+      }
+      n_inf  <- meta$n_obs[same & meta$prior_variant == "informative"]
+      n_weak <- meta$n_obs[same & meta$prior_variant == "weak"]
       if (length(n_inf) == 1 && length(n_weak) == 1 && !identical(n_inf, n_weak)) {
         message("[sensitivity] ", id, ": informative n=", n_inf, " but weak n=", n_weak,
                 " -- fitted to different data, skipped")

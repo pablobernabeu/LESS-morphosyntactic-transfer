@@ -5,26 +5,23 @@ accuracy for three morphosyntactic properties (subject–verb gender agreement, 
 object marking [DOM], verb–object number agreement) across sessions S2/3/4/6, replacing the
 legacy frequentist `lmerTest` pipeline. Target venue: *Journal of Neurolinguistics*, whose
 requirements are recorded in [`journal_requirements.json`](journal_requirements.json).
-
-> Provenance: the operational notes below were consolidated from the project's migration
-> handoff (since retired, 2026-06-10). Authoritative detail lives in the script headers, the
-> manuscript Methods, and `../_shared/R/`.
+Authoritative detail lives in the script headers, the manuscript Methods, and `../_shared/R/`.
 
 ## Pipeline (`scripts/`, run in order)
 
 | Step | Script | Runs | What |
 |---|---|---|---|
 | config | `scripts/_config.R` | — | analysis grid: 3 properties × 3 windows (200–500 / 300–600 / 400–900 ms) × 2 macroregions (lateral, midline) = **18 ERP cells**; model-ID naming |
-| 0 | `scripts/00_extract_participants.R` | local | participant flow and demographics (`_sample_flow.csv`, `_participants.csv`), written to both papers' `results/` so the two cannot drift |
-| 0b | `scripts/00b_audit_participant_flow.R` | local | per-participant × per-stage presence matrix and a consistency check on the stage totals (`_participant_matrix.csv`, `_flow_inconsistencies.csv`) |
-| 0c | `scripts/00c_extract_erp_retention.R` | local | retained single-trial EEG per modelled cell (`_erp_trial_retention.csv`), so the Method injects the retention numbers rather than hard-coding them |
-| 0d | `scripts/00d_extract_training_gate_flow.R` | local | the >80% post-training comprehension gate reconstructed per session (`_training_gate_flow.csv`), a non-random missingness mechanism both papers describe |
+| 0 | `scripts/00_extract_participants.R` | local | participant flow, demographics and the further languages reported (`_sample_flow.csv`, `_participants.csv`, `_participants_other_languages.csv`), written to both papers' `results/` so the two cannot drift |
+| 0b | `scripts/00b_audit_participant_flow.R` | local | per-participant × per-stage presence matrix and a consistency check on the stage totals (`_participant_matrix.csv`, `_flow_inconsistencies.csv`), written to both papers' `results/` |
+| 0c | `scripts/00c_extract_erp_retention.R` | local | retained single-trial EEG per modelled cell (`_erp_trial_retention.csv`) and the share of the Session-3 observations held by the mis-filtered datasets (`_misfiltered_share.csv`), so the Method injects both numbers |
+| 0d | `scripts/00d_extract_training_gate_flow.R` | local | the >80% post-training comprehension gate reconstructed per session (`_training_gate_flow.csv`), a non-random missingness mechanism both papers describe, written to both papers' `results/` |
 | 1 | `scripts/01_extract_erp_single_trials.R` | **HPC** | 18 single-trial ERP `.rds` (per-participant z-scored amplitude; baseline-as-covariate; unit-tested in `scripts/tests/`) |
-| 1b | `scripts/01b_extract_rsvp_timing.R` | local | census of post-critical word-onset latencies over the raw OpenSesame logs (`rsvp_timing_overlap.rds`), the reproducible source of the Method's RSVP stimulus-overlap disclosure |
-| 2 | `scripts/02_extract_accuracy.R` | local/HPC | 3 accuracy `.rds`, one per property, written to `data_derived/` |
+| 1b | `scripts/01b_extract_rsvp_timing.R` | local | census of post-critical word-onset latencies over the raw OpenSesame logs (`rsvp_timing_overlap.rds`, with its scalar fields as one tracked row in `_rsvp_timing.csv`), the reproducible source of the Method's RSVP stimulus-overlap disclosure |
+| 2 | `scripts/02_extract_accuracy.R` | local/HPC | 3 accuracy `.rds`, one per property, written to `data_derived/`, plus the reaction-time screen (`_accuracy_rt_screen.csv`), the per-session sentence inventory (`_accuracy_sentence_inventory.csv`) and the census of logfiles the extraction cannot read (`_accuracy_input_gaps.csv`) |
 | 3 | `scripts/03_fit_brms_erp.R` | **HPC** | Gaussian brms per cell |
 | 4 | `scripts/04_fit_brms_accuracy.R` | **HPC** | Bernoulli brms per property |
-| 5 | `scripts/05_posterior_summaries_and_contrasts.R` | **HPC** | pooled CSVs + S4→S6 retention contrast |
+| 5 | `scripts/05_posterior_summaries_and_contrasts.R` | **HPC** | pooled CSVs (`_pooled_convergence.csv`, `_pooled_posterior_summaries.csv`, `_pooled_fit_metadata.csv`), the S4→S6 retention contrasts (`_retention_contrasts.csv`), the first-session language advantage (`_first_session_language_advantage.csv`) and the prior sensitivity (`_prior_sensitivity.csv`) |
 | 7 | `scripts/07_extract_grand_average_waveforms.R` | **HPC** | condition-averaged, time-resolved ERP waveforms, averaged within the nine `brain_region` clusters, for the grand-average and difference-wave figures |
 | 7b | `scripts/07b_extract_grand_average_by_electrode.R` | **HPC** | the same extraction keeping the electrode dimension, which the interpolated scalp topography needs |
 | 7c | `scripts/07c_extract_electrode_coordinates.R` | local | scalp coordinates of the recording montage, read from the study's own BrainVision headers (`_electrode_coordinates.csv`), for the topography figure |
@@ -33,23 +30,26 @@ requirements are recorded in [`journal_requirements.json`](journal_requirements.
 | 9b | `scripts/09b_assemble_confirmatory_timecourse.R` | local | **Opt-in, and called by nothing.** Assembles a decoding time-course CSV from step 9's per-block checkpoints, so that a confirmatory block recomputed at a higher permutation count can be combined with exploratory blocks still at the lower one. It fails closed on any disagreement between the checkpoints, and it changes no default code path |
 | 10 | `scripts/10_extract_literature_trend.R` | local | Scopus counts of the L3-transfer literature by year and method (`_literature_trend.csv`), which the Introduction figure reads. Needs the non-CRAN package `scopusflow` (`pak::pak('pablobernabeu/scopusflow')`) and an Elsevier key in `SCOPUS_API_KEY`, read from `~/.Renviron` if the variable is not already set. Without both, the script stops and the manuscript falls back to its placeholders |
 
+The light descriptive tables of rows 0, 0c and 2 are regenerated on the cluster by
+`hpc/00_descriptives.slurm`, which runs scripts 00c, 02 and 00 in that order with every
+variant switch unset; it fits nothing.
+
 The decoding CSVs in `results/` carry two strata, which the `n_perm` column distinguishes.
 The confirmatory rows, which are the pooled all-sessions time-course and the only family
-the second-layer FDR spans, stand at 1000 permutations. The exploratory breakdowns are
-still at 200, and the job that brings them up is on the cluster. That split is deliberate
+the second-layer FDR spans, stand at 1000 permutations. For gender agreement the
+exploratory breakdowns are still at 200. For the other two properties both strata are at
+1000. The array element resubmitted to bring gender's exploratory blocks up ended out of
+memory, having been submitted with 6 GB per CPU against the 32 GB the script requests, so
+bringing them up means resubmitting the gender element of `hpc/08_decoding.slurm` at its
+scripted memory request. That split is deliberate
 and it settles the reported inference: the confirmatory family is complete, so no
 cluster-level conclusion in the manuscript is waiting on the remaining job.
 
-Two facts about earlier copies of these files are worth keeping in mind when comparing
-against an older render. Their `cluster_p_fdr` column came from a superseded family that
-pooled every cell of a property together, where the Method describes correcting over the
-confirmatory family alone. They were also written at 200 permutations throughout, and at
-200 step 9's admissibility guard refuses to compute the confirmatory FDR at all, because
-the permutation floor 1/(B+1) reaches alpha/m. Both are fixed in the files now shipped.
-
 The numbering has no step 6. `scripts/test_exclusion_guard.R` sits outside the pipeline
 as the regression test for the mis-filtered-dataset exclusion and its staleness guard.
-Run it after touching that logic.
+Run it after touching that logic. `scripts/tests/` holds the synthetic unit test of step
+1's transform and the check that pins the headline values of the retention artefact step
+0c writes.
 
 Each folder below this one carries a readme of its own:
 [`scripts/`](scripts/README.md) for the conventions and the opt-in script,
@@ -58,20 +58,18 @@ Each folder below this one carries a readme of its own:
 [`hpc/`](hpc/README.md) for the submission recipes.
 
 `data_derived/` is not in version control, so a fresh clone has none of it. Once step 2 has
-run it holds the three accuracy datasets (gender agreement: 15916 trials /
-64 ppts / acc 0.860; DOM: 11133 / 57 / 0.747; verb–object number: 6587 / 56 / 0.672). The ERP
-single-trial `.rds` are produced on the HPC. The full EEG merge is HPC-scale, so do **not** run
-`01_extract_erp` locally (its transform is validated synthetically by the unit test instead:
+run it holds the three accuracy datasets, one per property. Their trial and participant
+counts are recorded per fit in `results/_pooled_fit_metadata.csv` (columns `n_obs`,
+`n_participants`) and are not restated here. The ERP single-trial `.rds` are produced on
+the HPC. The full EEG merge is HPC-scale, so do **not** run `01_extract_erp` locally (its
+transform is validated synthetically by the unit test instead:
 `Rscript --vanilla scripts/tests/test_summarise_cells.R`).
 
 Heavy steps run on Oxford's SLURM clusters via environment modules, with no container.
 See [`hpc/README.md`](hpc/README.md) for submission, resourcing, and cluster-specific
-notes. Access is via the `educ-intract` unix group. Since 2026-06-30 the preferred
-target for these single-node brms fits is HTC, submitted as
-`sbatch --clusters=htc --account=educ-intract <script>.slurm`, standard QoS only and
-never `--qos=priority`. A plain `sbatch`, which is what `hpc/submit_all.sh` uses, goes
-to the login node's default cluster, ARC, where no `--account` is needed. The project
-`/data` space is mounted at the same path on both clusters.
+notes. Access is via the `educ-intract` unix group. Which cluster a job goes to, and the
+submit line for each, is set out once in [`../HPC_RUNBOOK.md`](../HPC_RUNBOOK.md) under
+"ARC or HTC".
 
 ## Informative priors (+ sensitivity / prior-predictive runs)
 
@@ -117,12 +115,11 @@ quarto render paper_1_transfer/paper_1_morphosyntax.qmd --to html   # or --to pd
 
 Two blockers worth knowing about:
 
-1. **The project `.Rprofile` and the R library.** It used to activate renv unconditionally,
-   running `.libPaths("Rcache")` and `source("renv/activate.R")` in every R session Quarto or
-   knitr started, which hid the real library. It is now guarded on both `renv/activate.R`
-   existing and `renv/library/` being populated. A fresh clone has the first and not the
-   second, because `renv/.gitignore` excludes the library, so R stays on the system library
-   until someone runs `renv::restore()`. Do not run it here. `renv.lock` records the R side
+1. **The project `.Rprofile` and the R library.** `.Rprofile` activates renv only when
+   `renv/activate.R` exists and `renv/library/` is populated, for the reasons the file itself
+   gives. A fresh clone has the first and not the second, because `renv/.gitignore` excludes
+   the library, so R stays on the system library until someone runs `renv::restore()`. Do not
+   run it here. `renv.lock` records the R side
    of the cluster fitting environment (Linux, R 4.5.1, brms 2.23.0, cmdstanr 0.9.0), and this
    box runs R 4.6.1 on Windows, so a restore would try to build packages pinned for a
    different R and platform. One lockfile cannot serve both. CmdStan and the compiler are not
@@ -167,18 +164,17 @@ The fits and the render run under different R versions on different platforms, a
 should not be conflated. Fitting uses environment modules, with no container involved.
 [`../_shared/hpc/arc_env.sh`](../_shared/hpc/arc_env.sh) loads `R/4.5.1-gfbf-2025a` (R 4.5.1
 on `x86_64-pc-linux-gnu`, with the gfbf/2025a toolchain built on GCC 14.2.0) and points
-`R_LIBS_USER` at the project library `/data/educ-intract/educ1242/new_LESS/Rlib/R-4.5`. It
-also pins `CXXFLAGS_OPTIM = -O1` in CmdStan's `make/local`, because GCC 14.2.0 crashes while
-instantiating Stan's `reduce_sum` templates at higher optimisation levels (see
-[`../HPC_RUNBOOK.md`](../HPC_RUNBOOK.md)). CmdStan and that compiler flag are not R packages,
-so no lockfile can record them, and those two files are where they are written down.
+`R_LIBS_USER` at the project library `$LES_BASE/Rlib/R-4.5`. CmdStan is built at `-O1`
+because of a GCC 14.2.0 compiler crash; see `../_shared/hpc/arc_env.sh`. CmdStan and that
+compiler flag are not R packages, so no lockfile can record them, and `arc_env.sh` and
+[`../HPC_RUNBOOK.md`](../HPC_RUNBOOK.md) are where they are written down.
 
 Package versions are not restated here, because the run records them itself.
 `results/_provenance.csv` (`component, version, recorded_utc`) is written by
 [`../_shared/R/04_provenance.R`](../_shared/R/04_provenance.R) from
-`scripts/03_fit_brms_erp.R`, and holds the R, brms, cmdstanr, rstan, StanHeaders, posterior,
-loo, projpred, bayesplot and CmdStan versions of the run that produced the results, together
-with the seeds `LES_SEED` and `LES_DECODE_SEED`. The manuscript injects those values inline,
+`scripts/03_fit_brms_erp.R`, and holds the R and platform versions, the versions of every
+package in `LES_PROVENANCE_PKGS` (`_shared/R/04_provenance.R`), the CmdStan version and
+the seeds. The manuscript injects those values inline,
 so that file is the authority wherever any list disagrees with it. The R side of the same
 environment is pinned in the repository's `renv.lock`.
 
@@ -196,8 +192,8 @@ environment is pinned in the repository's `renv.lock`.
   `eegUtils` and `osfr` are absent here.
 - Quarto 1.10.18 at `C:\Program Files\Quarto\bin\quarto.exe`, which is the `quarto` found on
   PATH and therefore the one the render recipe above invokes. An older standalone 1.9.37 also
-  sits under `C:\Users\pablob\AppData\Local\Programs\Quarto\bin` and is not what renders these
-  manuscripts. knitr 1.51 supplies the render engine. The `apaquarto` extension the `.qmd`
+  sits under the user profile and is not what renders these manuscripts. knitr 1.51 supplies
+  the render engine. The `apaquarto` extension the `.qmd`
   format depends on is vendored under each paper's `_extensions/`, so it needs no separate
   install. These versions are recorded here in prose on purpose: `renv.lock` pins the cluster
   fitting environment and must not be restored on this box.

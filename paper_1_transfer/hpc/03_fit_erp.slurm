@@ -34,13 +34,15 @@ mkdir -p paper_1_transfer/hpc/logs
 # 4 chains x 2 threads/chain = 8 CPUs (matches --cpus-per-task above).
 export LES_THREADS_PER_CHAIN=2
 
-# Variant fits (e.g. LES_P1_RETENTION_FREE=1) write their own logs so the
-# mainline fit logs are never overwritten by a resubmission. The mis-filter-
-# retained tag comes first, mirroring cell_tag in 03_fit_brms_erp.R.
+# Variant fits (LES_P1_RETENTION_FREE=1, LES_P1_ITEM_SLOPE=1, LES_PRIOR_SET=weak,
+# LES_P1_KEEP_MISFILTERED=1) write their own logs so the mainline fit logs are never
+# overwritten by a resubmission. The mis-filter-retained tag comes first, mirroring
+# cell_tag in 03_fit_brms_erp.R.
 TAG=""
 [ "${LES_P1_KEEP_MISFILTERED:-0}" = "1" ] && TAG="${TAG}_keepmisfiltered"
 [ "${LES_P1_RETENTION_FREE:-0}" = "1" ] && TAG="${TAG}_retfree"
 [ "${LES_P1_ITEM_SLOPE:-0}" = "1" ]     && TAG="${TAG}_itemslope"
+[ "${LES_PRIOR_SET:-informative}" = "weak" ] && TAG="${TAG}_weakprior"
 
 # Array index -> (property window macroregion). Enumerated property-major, then
 # window, then macroregion, so the mapping is stable across resubmissions.

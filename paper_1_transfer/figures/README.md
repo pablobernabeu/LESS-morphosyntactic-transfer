@@ -18,9 +18,19 @@ is guarded on the file existing, and falls back to a "pending figure generation"
 it is absent. Without that branch, the chunk would emit nothing at all and the
 `@fig-priorpc` cross-reference in the text would render as a dangling reference.
 
-Replacing it means regenerating the corresponding `<cell_tag>_priorpc.png` on the cluster
-and copying that file in under this name. If you show a different cell, change the caption
-in the `.qmd` to match, since the caption names the cell.
+The committed copy was placed here by hand, and the `<cell_tag>` it came from is not
+recorded: the caption names the cell, but whether the panel was drawn under the base or
+the maximal random-effect structure, and under the informative or the weak prior set, has
+to be confirmed by the authors. Once confirmed, regenerate it with a recorded source by
+submitting step 3 with `LES_PRIOR_PREDICTIVE=1` and `LES_P1_PRIORPC_REPRESENTATIVE` set to
+the full tag, for example
+`sbatch --export=ALL,LES_P1_ITEM_SLOPE=1,LES_PRIOR_PREDICTIVE=1,LES_P1_PRIORPC_REPRESENTATIVE=erp_gender_agreement_400_900_midline_itemslope paper_1_transfer/hpc/03_fit_erp.slurm`
+for the maximal-structure, informative-prior panel of that cell (the tag has to match the
+switches of the run: `_itemslope` needs `LES_P1_ITEM_SLOPE=1`, `_weakprior` needs
+`LES_PRIOR_SET=weak`). The array task whose `cell_tag` equals the named value copies its
+`<cell_tag>_priorpc.png` to this name; with the variable unset no run writes this file. If
+you show a different cell, change the caption in the `.qmd` to match, since the caption
+names the cell.
 
 The `_priorpc` and `_ppc` files for the other seventeen ERP cells and the three accuracy
 models are produced on the cluster and are diagnostic. They are read by eye, or through

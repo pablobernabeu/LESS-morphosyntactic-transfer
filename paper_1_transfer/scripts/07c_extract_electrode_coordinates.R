@@ -46,6 +46,7 @@
 
 suppressPackageStartupMessages({
   source(here::here("_shared", "R", "00_paths.R"))
+  source(here::here("_shared", "R", "03_data_manifest.R"))
 })
 
 # --- the electrode -> brain_region map used by the study's importer -------------
@@ -92,7 +93,7 @@ montage <- list(
   out[order(out$electrode), , drop = FALSE]
 }
 
-vhdr_files <- list.files(data_path("raw data", "EEG"), pattern = "[.]vhdr$",
+vhdr_files <- list.files(erp_single_trials_path(), pattern = "[.]vhdr$",
                          recursive = TRUE, full.names = TRUE)
 if (!length(vhdr_files)) stop("No BrainVision headers found under data/raw data/EEG.")
 

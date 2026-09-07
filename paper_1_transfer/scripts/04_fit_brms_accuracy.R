@@ -24,14 +24,14 @@
 # https://doi.org/10.1016/j.jml.2012.11.001):
 #   (1 + z_recoded_grammaticality + z_recoded_session | participant_lab_ID)
 # Participants vary in both their overall accuracy and in how strongly grammaticality
-# and session affect them, hence the by-participant slopes. There is deliberately NO
-# by-item random effect: inspection of the logfiles shows the judgement sentences are
-# generated combinatorially, so almost every trial is a unique string (in a
-# representative session, 479 distinct sentences across 576 trials) rather than a
-# member of a fixed, shared item set. That count comes from a one-off inspection of the
-# OpenSesame logfiles rather than from the pipeline, which keeps no sentence column
-# (see .les_acc_cols in 02_extract_accuracy.R). A by-item grouping would therefore be at (or
-# near) the observation level and is not identifiable; this contrasts with the ERP
+# and session affect them, hence the by-participant slopes.
+# There is deliberately NO by-item random effect. The judgement sentences are generated
+# combinatorially, and results/_accuracy_sentence_inventory.csv, written by
+# 02_extract_accuracy.R from the logged sentence text over the modelled trials, records per
+# session how many distinct sentences there are and how often each recurs across
+# participants. Each sentence is presented only a few times across the sample, so item
+# variance is thinly sampled and no by-item term is carried; its variance is absorbed
+# into the residual, which the manuscript notes under Limitations. This contrasts with the ERP
 # task, which uses a fixed sentence-marker stimulus set and so retains by-item
 # effects (step 03). Random-effect correlations use the shared LKJ(2) prior
 # (Lewandowski et al., 2009, https://doi.org/10.1016/j.jmva.2009.04.008).
@@ -114,14 +114,16 @@ fit_paper1_accuracy <- function(property) {
     formula = les_p1_accuracy_formula(),
     data    = dat,
     family  = bernoulli(),
-    prior   = les_acc_prior(property),     # informative; LES_PRIOR_SET=weak -> sensitivity baseline
+    # Informative; LES_PRIOR_SET=weak selects the sensitivity baseline.
+    prior   = les_acc_prior(property),
     file    = paper1_results(model_tag)
   )
 
   conv <- les_check_convergence(fit, label = model_id,
                                 save_to = paper1_results(paste0(model_tag, "_convergence.rds")))
   les_posterior_summary(fit, save_to = paper1_results(paste0(model_tag, "_summary.rds")))
-  try(les_save_ppc(fit, paper1_figures(paste0(model_tag, "_ppc.png")), type = "bars"), silent = TRUE)
+  try(les_save_ppc(fit, paper1_figures(paste0(model_tag, "_ppc.png")), type = "bars"),
+      silent = TRUE)
 
   # Fit-time record of the analysed sample (see _config.R). exclusion_applicable is
   # FALSE here: the 1 Hz offline filter affects the EEG, not the behavioural
@@ -129,9 +131,10 @@ fit_paper1_accuracy <- function(property) {
   les_p1_write_fit_meta(dat, model_id, paper1_results(paste0(model_tag, "_fitmeta.rds")),
                         exclusion_applicable = FALSE)
 
-  message(sprintf("[acc] %s | converged = %s | max Rhat = %.4f | min ESS = %.0f | divergences = %d",
-                  model_id, conv$passed, conv$max_rhat,
-                  min(conv$min_ess_bulk, conv$min_ess_tail), conv$n_divergent))
+  message(sprintf(
+    "[acc] %s | converged = %s | max Rhat = %.4f | min ESS = %.0f | divergences = %d",
+    model_id, conv$passed, conv$max_rhat,
+    min(conv$min_ess_bulk, conv$min_ess_tail), conv$n_divergent))
   invisible(fit)
 }
 

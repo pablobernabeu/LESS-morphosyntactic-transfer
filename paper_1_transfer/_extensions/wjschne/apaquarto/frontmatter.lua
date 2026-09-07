@@ -363,7 +363,7 @@ return {
       if byauthor then
         for i, a in ipairs(byauthor) do
           if a.roles then
-            credit_paragraph = extend_paragraph(credit_paragraph, { pandoc.Emph(a.apaauthordisplay) }, pandoc.Str(". "))
+            credit_paragraph = extend_paragraph(credit_paragraph, { pandoc.Strong(a.apaauthordisplay) }, pandoc.Str(". "))
             credit_paragraph.content:extend({ pandoc.Strong(pandoc.Str(": ")) })
             local rolelist = {}
             for j, role in ipairs(a.roles) do
@@ -400,19 +400,16 @@ return {
           end
         end
 
-        credit_paragraph.content:insert(1, pandoc.Space())
-        for i, j in pairs(authorroleintroduction) do
-          credit_paragraph.content:insert(i, j)
-        end
         if not mask and not meta["suppress-credit-statement"] then
-          body:extend({ credit_paragraph })
+          body:extend({ pandoc.Para(authorroleintroduction), credit_paragraph })
         end
       end
 
       local corresponding_paragraph = pandoc.Para(pandoc.Str(""))
       local check_corresponding = false
       if meta["author-note"] and meta["author-note"]["correspondence-note"] then
-        corresponding_paragraph.content:extend(meta["author-note"]["correspondence-note"])
+        local correspondence_note = pandoc.utils.stringify(meta["author-note"]["correspondence-note"])
+        corresponding_paragraph.content:extend(pandoc.Inlines(correspondence_note))
       else
         if byauthor then
           for i, a in ipairs(byauthor) do

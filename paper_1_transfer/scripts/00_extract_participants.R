@@ -12,6 +12,10 @@
 #                          metric,value,sd,n,vmin,vmax,note) over the analysed
 #                          sample, so the Method's demographics are injected, not
 #                          transcribed.
+#   _participants_other_languages.csv
+#                          One row per language named in LHQ3 item 7 beyond Norwegian
+#                          and English, with the number of participants naming it, so
+#                          the Participants section can count that knowledge.
 #
 # WHY
 # ---
@@ -53,7 +57,9 @@ suppressPackageStartupMessages({
   library(readr)
 })
 
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || is.na(a)) b else a
+# The first argument unless it is NULL, empty or NA, otherwise the second. Named so as
+# not to shadow base R's %||% (R >= 4.4.0), which treats NA as a value.
+.first_or <- function(a, b) if (is.null(a) || length(a) == 0 || is.na(a)) b else a
 
 .num <- function(x) suppressWarnings(as.numeric(x))
 
@@ -98,6 +104,36 @@ suppressPackageStartupMessages({
   do.call(rbind, out)
 }
 
+# --- Every language named in the item-7 block ----------------------------------
+# The same four slots, read for their names alone. Returns one row per (participant,
+# named language), so that the languages participants report beyond Norwegian and
+# English can be counted, which the Participants section does in place of an uncounted
+# "some participants".
+.les_lhq3_languages <- function(raw_mat) {
+  out <- lapply(seq_len(nrow(raw_mat)), function(i) {
+    row <- raw_mat[i, ]
+    id  <- trimws(as.character(row[[1]]))
+    nms <- vapply(.les_english_slot_bases,
+                  function(b) trimws(as.character(row[[b]])), character(1))
+    nms <- nms[!is.na(nms) & nzchar(nms) & !tolower(nms) %in% c("na", "n/a", "none")]
+    if (!length(nms)) return(NULL)
+    data.frame(lhq3_id = id, language = nms, stringsAsFactors = FALSE)
+  })
+  do.call(rbind, Filter(Negate(is.null), out))
+}
+
+# A language name as the questionnaire recorded it, reduced to a comparable form: any
+# parenthetical qualifier dropped, then title case. "Norwegian" and "English" in any of
+# their spellings are the two languages every participant has, so they are not "further"
+# languages.
+.les_language_norm <- function(x) {
+  x <- gsub("\\s*\\(.*\\)\\s*$", "", trimws(x))
+  tools::toTitleCase(tolower(x))
+}
+.les_is_prior_language <- function(x) {
+  grepl("^(english|norw|norsk|bokm|nynorsk)", tolower(x))
+}
+
 # --- Count distinct participants in a derived rds (if present) ----------------
 .les_n_participants_rds <- function(path, id_col = "participant_lab_ID",
                                     filter_fun = NULL) {
@@ -134,7 +170,9 @@ les_extract_participants <- function() {
             rep(TRUE, n_enrolled), "participant key")
   for (i in seq_along(.les_session_date_cols)) {
     col <- .les_session_date_cols[[i]]; nm <- names(.les_session_date_cols)[i]
-    present <- if (col %in% names(key)) !is.na(key[[col]]) & trimws(as.character(key[[col]])) != "" else rep(FALSE, n_enrolled)
+    present <- if (col %in% names(key)) {
+      !is.na(key[[col]]) & trimws(as.character(key[[col]])) != ""
+    } else rep(FALSE, n_enrolled)
     add_stage(paste0("attended_", nm), i, paste0("Attended Session ", sub("^S", "", nm)),
               present, "participant key")
   }
@@ -177,7 +215,8 @@ les_extract_participants <- function() {
     ci <- tryCatch(readRDS(cog_p), error = function(e) NULL)
     if (!is.null(ci) && "participant_lab_ID" %in% names(ci)) {
       ci1 <- ci[ci$session %in% 1, , drop = FALSE]
-      has_idx <- rowSums(!is.na(ci1[intersect(c("stroop_interference", "digit_span", "asrt_learning"), names(ci1))])) > 0
+      idx <- intersect(c("stroop_interference", "digit_span", "asrt_learning"), names(ci1))
+      has_idx <- rowSums(!is.na(ci1[idx])) > 0
       cog_ids_s1 <- as.character(unique(ci1$participant_lab_ID[has_idx]))
     }
   }
@@ -204,11 +243,15 @@ les_extract_participants <- function() {
   # NA until resting_state_eeg.rds exists.
   rs_p <- paper2_derived("resting_state_eeg.rds")
   rs_n <- rs_me <- rs_mn <- NA_integer_
-  joint_ids <- if (length(cog_ids_s1) && length(traj_ids)) intersect(cog_ids_s1, traj_ids) else character(0)
+  joint_ids <- if (length(cog_ids_s1) && length(traj_ids)) {
+    intersect(cog_ids_s1, traj_ids)
+  } else character(0)
   if (file.exists(rs_p)) {
     rs <- tryCatch(readRDS(rs_p), error = function(e) NULL)
     if (!is.null(rs) && "participant_lab_ID" %in% names(rs)) {
-      if ("condition" %in% names(rs)) rs <- rs[grepl("closed", rs$condition, ignore.case = TRUE), , drop = FALSE]
+      if ("condition" %in% names(rs)) {
+        rs <- rs[grepl("closed", rs$condition, ignore.case = TRUE), , drop = FALSE]
+      }
       # A participant counts as usable rs-EEG only with a complete predictor vector
       # (all band powers + IAF non-missing) -- the listwise criterion the model applies.
       bnd <- intersect(c("delta", "theta", "alpha", "beta", "gamma", "iaf"), names(rs))
@@ -224,7 +267,7 @@ les_extract_participants <- function() {
   # EEG in the modelled Grammatical/Ungrammatical conditions, from the per-cell
   # retained-trial table. (The ancillary violation conditions are excluded.)
   erp_n <- erp_me <- erp_mn <- NA_integer_
-  tc_path <- data_path("EEG_trial_count_per_condition.csv")
+  tc_path <- erp_trial_count_csv()
   if (file.exists(tc_path)) {
     tc <- suppressWarnings(readr::read_csv(tc_path, show_col_types = FALSE, progress = FALSE))
     tc <- tc[tc$grammaticality %in% c("Grammatical", "Ungrammatical"), , drop = FALSE]
@@ -243,7 +286,7 @@ les_extract_participants <- function() {
   agg <- suppressMessages(readxl::read_excel(
     lhq3_path("LHQ3 Aggregate Scores.xlsx"), skip = 1))
   names(agg) <- trimws(names(agg))
-  id_agg <- names(agg)[grepl("^Participant ID$", names(agg))][1] %||% names(agg)[1]
+  id_agg <- .first_or(names(agg)[grepl("^Participant ID$", names(agg))][1], names(agg)[1])
   keep_agg <- agg[[id_agg]] %in% key$participant_LHQ3_ID
   agg <- agg[keep_agg, , drop = FALSE]
   gcol <- function(sub) names(agg)[grepl(sub, names(agg), ignore.case = TRUE)][1]
@@ -260,6 +303,18 @@ les_extract_participants <- function() {
   eng <- .les_lhq3_english(raw_mat)
   eng <- eng[eng$lhq3_id %in% key$participant_LHQ3_ID, , drop = FALSE]
   hand <- tolower(trimws(eng$handedness))
+
+  # Languages reported beyond Norwegian and English, for the Participants section and
+  # the Limitations, which note that such knowledge was not screened out.
+  langs <- .les_lhq3_languages(raw_mat)
+  langs <- langs[langs$lhq3_id %in% key$participant_LHQ3_ID, , drop = FALSE]
+  langs$language <- .les_language_norm(langs$language)
+  other <- langs[!.les_is_prior_language(langs$language), , drop = FALSE]
+  n_other_language <- length(unique(other$lhq3_id))
+  other_tbl <- other %>%
+    dplyr::distinct(lhq3_id, language) %>%
+    dplyr::count(language, name = "n_participants") %>%
+    dplyr::arrange(dplyr::desc(n_participants), language)
 
   n_lhq3 <- nrow(agg)
   msd <- function(x) { x <- x[!is.na(x)]; c(mean = mean(x), sd = sd(x),
@@ -294,7 +349,9 @@ les_extract_participants <- function() {
     row_m("eng_aoa_4mod", a4, "English AoA, mean over listening/speaking/reading/writing"),
     row_m("eng_years", yr, "English years of use (LHQ3 item-7)"),
     row_m("eng_l2_proficiency", p, "LHQ3 L2 (English) self-rated proficiency, 0-1"),
-    row_m("multilingual_diversity", d, "LHQ3 Multilingual Language Diversity Score")
+    row_m("multilingual_diversity", d, "LHQ3 Multilingual Language Diversity Score"),
+    row_c("n_other_language", n_other_language, n_lhq3,
+          "participants naming a language beyond Norwegian and English in LHQ3 item 7")
   )
 
   # ---- Write to BOTH papers' results/ ----------------------------------------
@@ -303,9 +360,12 @@ les_extract_participants <- function() {
     utils::write.csv(flow_df, fp, row.names = FALSE)
     pp <- res("_participants.csv");  les_assert_readonly_data(pp)
     utils::write.csv(parts, pp, row.names = FALSE)
+    lp <- res("_participants_other_languages.csv"); les_assert_readonly_data(lp)
+    utils::write.csv(other_tbl, lp, row.names = FALSE)
   }
-  message("[participants] wrote _sample_flow.csv and _participants.csv to both papers")
-  list(flow = flow_df, participants = parts)
+  message("[participants] wrote _sample_flow.csv, _participants.csv and ",
+          "_participants_other_languages.csv to both papers")
+  list(flow = flow_df, participants = parts, other_languages = other_tbl)
 }
 
 # =============================================================================
@@ -315,6 +375,7 @@ les_extract_participants <- function() {
   res <- les_extract_participants()
   cat("\n--- sample flow ---\n"); print(res$flow, row.names = FALSE)
   cat("\n--- demographics ---\n"); print(res$participants, row.names = FALSE)
+  cat("\n--- further languages reported ---\n"); print(res$other_languages, row.names = FALSE)
   message("[participants] done.")
 }
 

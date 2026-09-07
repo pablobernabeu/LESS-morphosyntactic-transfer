@@ -69,6 +69,34 @@ LES_P1_WINDOWS <- list(
   "400_900" = c(min_ms = 400, max_ms = 898)
 )
 
+# --- Acquisition epoch (ms) ---------------------------------------------------
+# The importer samples every epoch on the fixed grid seq(-100, 1098, by = 2). The
+# full-epoch extractions (07, 07b) and the decoding tensor (08) load these bounds; the
+# single-trial extraction (01) loads only the span of LES_P1_WINDOWS plus the baseline.
+# Kept unnamed: 08 places the two values in its tensor fingerprint, which is compared
+# with identical(), so a names attribute would invalidate every cached tensor.
+LES_P1_EPOCH_MS <- c(-100, 1098)
+
+# --- Grammaticality-judgement reaction-time screen (ms) ----------------------
+# Trials with a response time outside (200, 4000) ms are dropped by 02_extract_accuracy.R.
+# The bounds are carried over unchanged from the legacy behavioural import so that both
+# pipelines analyse the same trials; that script records no rationale for them.
+LES_P1_ACC_RT_MS <- c(200, 4000)
+
+# --- RSVP timing census (ms; 01b_extract_rsvp_timing.R) ----------------------
+# Subsequent word onsets are counted within (0, LES_P1_RSVP_WINDOW_MS] of the critical
+# onset, the upper bound of the late analysis window. An onset-to-onset step above
+# LES_P1_RSVP_SOA_MAX_MS marks a corrupt log row and excludes the trial.
+LES_P1_RSVP_WINDOW_MS  <- 900
+LES_P1_RSVP_SOA_MAX_MS <- 5000
+
+# --- Default seed of the decoding stage --------------------------------------
+# 09_run_decoding.R reads LES_DECODE_SEED from the environment with its own literal
+# default, and hpc/08_decoding.slurm exports the same literal. The three must agree,
+# because 03_fit_brms_erp.R records this value in results/_provenance.csv as the seed
+# the decoding ran under. test_exclusion_guard.R checks the two literals against it.
+LES_P1_DECODE_SEED_DEFAULT <- 20260702L
+
 # --- Electrode macro-regions --------------------------------------------------
 # "lateral" = the six left/right clusters (carry the hemisphere contrast);
 # "midline" = the three midline clusters (no hemisphere contrast -> midline models
@@ -164,9 +192,10 @@ les_p1_drop_misfiltered <- function(d) {
 # The tag is therefore threaded through les_p1_cell_rds() (the derived data) and through
 # cell_tag in 03_fit_brms_erp.R (the fit and its artefacts). It is placed FIRST among the
 # tags, ahead of the prior, item and retention tags, because several accessors in the
-# manuscript and in script 05 match the END of a model id (grepl("_itemslope$", ...)); a
-# fourth tag appended after those would silently reclassify every maximal variant fit as
-# base. With the variable unset the tag is "" and every path is exactly what it was.
+# manuscript and in script 05 read the random-effect structure off the END of a model id
+# (grepl("_itemslope(_retfree)?$", ...)); a fourth tag appended after those would silently
+# reclassify every maximal variant fit as base. With the variable unset the tag is "" and
+# every path is exactly what it was.
 les_p1_keep_misfiltered <- function() identical(Sys.getenv("LES_P1_KEEP_MISFILTERED"), "1")
 les_p1_misfiltered_tag  <- function() if (les_p1_keep_misfiltered()) "_keepmisfiltered" else ""
 
@@ -284,6 +313,55 @@ les_p1_erp_grid <- function() {
   )
   grid$cell_id <- with(grid, mapply(les_p1_cell_id, property, window, macroregion))
   grid[order(grid$property, grid$window, grid$macroregion), , drop = FALSE]
+}
+
+# --- May the manuscript state that the mis-filtered datasets were excluded? -----
+#
+# The decision rule behind the Method's exclusion sentence. `tbl` is the pooled fit
+# metadata (results/_pooled_fit_metadata.csv, or NULL when it is absent) and `primary`
+# the random-effect structure the manuscript reports. Returns "" when every reported ERP
+# fit carries a clean record, otherwise the reason the claim cannot yet stand, which the
+# manuscript wraps in its pending marker. It lives here, beside the helpers it audits, so
+# that the manuscript and test_exclusion_guard.R apply one rule.
+les_p1_misfilter_status <- function(tbl, primary, n_expected = nrow(les_p1_erp_grid())) {
+  if (is.null(tbl)) {
+    return("the results currently shown were computed before this exclusion was applied")
+  }
+  # The primary analysis is the informative-prior set fitted under the primary
+  # random-effect structure. The weak-prior refits and the other structure are
+  # sensitivity analyses, reported separately and audited with their own records.
+  # Filtering on structure matters: base and maximal fits share a model id, so without
+  # it every cell matches twice and the completeness check below passes on 36 rows that
+  # are really 18 cells fitted two ways.
+  # The mis-filter-retained refits are excluded here for the same reason. They are a
+  # sensitivity analysis that deliberately keeps the four datasets, so their records carry
+  # exclusion_applied = FALSE by design; counting them would make the reported grid look
+  # stale and print a Pending marker over results that are in fact clean. Their model ids
+  # carry a "_keepmisfiltered" tag, and the boolean column is the direct test.
+  m <- tbl[tbl$exclusion_applicable %in% TRUE &
+             tbl$prior_variant %in% "informative", , drop = FALSE]
+  if ("keep_misfiltered" %in% names(m)) {
+    m <- m[!(m$keep_misfiltered %in% TRUE), , drop = FALSE]
+  }
+  if ("structure" %in% names(m)) {
+    m <- m[m$structure %in% primary, , drop = FALSE]
+  } else if (!identical(primary, "base")) {
+    return(paste0("the fit records predate the random-effect-structure column, ",
+                  "so the structure behind the reported fits cannot be confirmed"))
+  }
+  if (nrow(m) == 0) return("no fitted model carries a record of this exclusion")
+  n_stale <- sum(!(m$exclusion_applied %in% TRUE))
+  if (n_stale > 0) {
+    return(sprintf("%d of %d fitted ERP models still contain these datasets",
+                   n_stale, nrow(m)))
+  }
+  # Every fit that reported in is clean, but a partial refit would also look clean.
+  # Require the audit to cover the whole grid before the claim is allowed to stand.
+  if (nrow(m) < n_expected) {
+    return(sprintf("only %d of the %d ERP models have been refitted under it",
+                   nrow(m), n_expected))
+  }
+  ""
 }
 
 cat("[paper1/_config] ERP grid:",

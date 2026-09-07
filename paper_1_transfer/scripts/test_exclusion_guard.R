@@ -18,10 +18,11 @@
 # asserted an exclusion that had not been applied, silently. These tests pin down
 # the replacement behaviour so that failure cannot recur unnoticed.
 #
-# The checks cover three things: that the row-matching survives the factor-level
+# The checks cover four things: that the row-matching survives the factor-level
 # trap documented in _config.R, that the fit-time metadata records what the models
-# were actually fitted to, and that the manuscript's decision rule refuses to clear
-# the marker on partial, exempt, or sensitivity-only evidence.
+# were actually fitted to, that the manuscript's decision rule refuses to clear
+# the marker on partial, exempt, or sensitivity-only evidence, and that the decoding
+# seed's default is typed identically wherever it has to be repeated.
 #
 # USAGE
 #   Rscript paper_1_transfer/scripts/test_exclusion_guard.R
@@ -79,41 +80,48 @@ ck("the accuracy models are exempt, not flagged",   r_acc$exclusion_applied,    
 ck("and are recorded as out of scope",              r_acc$exclusion_applicable, FALSE)
 
 # --- The manuscript's decision rule ------------------------------------------
-# Kept in step with the misfilter_status() body in paper_1_morphosyntax.qmd: if
-# that rule changes, change this one and the expectations below with it.
-status_for <- function(tbl) {
-  if (is.null(tbl)) return("PENDING: no record")
-  m <- tbl[tbl$exclusion_applicable %in% TRUE & tbl$prior_variant %in% "informative", , drop = FALSE]
-  if ("keep_misfiltered" %in% names(m)) m <- m[!(m$keep_misfiltered %in% TRUE), , drop = FALSE]
-  if (nrow(m) == 0) return("PENDING: nothing applicable")
-  n_stale <- sum(!(m$exclusion_applied %in% TRUE))
-  if (n_stale > 0) return(sprintf("PENDING: %d of %d stale", n_stale, nrow(m)))
-  if (nrow(m) < nrow(les_p1_erp_grid()))
-    return(sprintf("PENDING: only %d of %d refitted", nrow(m), nrow(les_p1_erp_grid())))
-  ""
-}
+# les_p1_misfilter_status() in _config.R is the rule the manuscript applies, so the
+# checks exercise that function directly. It returns "" when the claim may stand and
+# the reason otherwise; the manuscript wraps a non-empty reason in its pending marker.
+status_for <- function(tbl) les_p1_misfilter_status(tbl, primary = "maximal")
+pending    <- function(x) nzchar(x)
 row_for <- function(i, applied, applicable = TRUE, variant = "informative",
-                    keep = FALSE)
+                    keep = FALSE, structure = "maximal")
   data.frame(model = paste0("erp_", i, if (keep) "_keepmisfiltered" else ""),
              exclusion_applicable = applicable,
              misfiltered_rows = if (applied) 0L else 12L,
              exclusion_applied = applied, prior_variant = variant,
-             keep_misfiltered = keep)
+             keep_misfiltered = keep, structure = structure)
 rows <- function(n, ...) do.call(rbind, lapply(seq_len(n), row_for, ...))
 
 ck("a complete set of clean informative fits clears the marker",
    status_for(rows(18, applied = TRUE)), "")
 ck("no metadata at all keeps the marker",
-   grepl("^PENDING", status_for(NULL)), TRUE)
+   pending(status_for(NULL)), TRUE)
 ck("a partial refit keeps the marker",
-   grepl("only 6 of 18", status_for(rows(6, applied = TRUE))), TRUE)
+   grepl("only 6 of the 18", status_for(rows(6, applied = TRUE))), TRUE)
 ck("a single stale cell among 18 keeps the marker",
-   grepl("1 of 18 stale", status_for(rbind(rows(17, applied = TRUE),
-                                           row_for(18, applied = FALSE)))), TRUE)
+   grepl("1 of 18 fitted", status_for(rbind(rows(17, applied = TRUE),
+                                            row_for(18, applied = FALSE)))), TRUE)
 ck("the exempt accuracy fits alone cannot clear the marker",
-   grepl("^PENDING", status_for(rows(3, applied = TRUE, applicable = FALSE))), TRUE)
+   pending(status_for(rows(3, applied = TRUE, applicable = FALSE))), TRUE)
 ck("the weak-prior sensitivity refits alone cannot clear the marker",
-   grepl("^PENDING", status_for(rows(18, applied = TRUE, variant = "weak"))), TRUE)
+   pending(status_for(rows(18, applied = TRUE, variant = "weak"))), TRUE)
+
+# The base-structure fits are the structural sensitivity comparison, so a clean grid of
+# them cannot substantiate a claim about the maximal fits the manuscript reports, and
+# records that predate the structure column cannot be assigned to either structure.
+ck("the other random-effect structure alone cannot clear the marker",
+   pending(status_for(rows(18, applied = TRUE, structure = "base"))), TRUE)
+ck("both structures clean, the reported one is audited on its own 18 rows",
+   status_for(rbind(rows(18, applied = TRUE, structure = "base"),
+                    rows(18, applied = TRUE))), "")
+no_structure <- function(d) d[, setdiff(names(d), "structure"), drop = FALSE]
+ck("records without a structure column keep the marker for a maximal primary",
+   grepl("predate the random-effect-structure column",
+         status_for(no_structure(rows(18, applied = TRUE)))), TRUE)
+ck("records without a structure column still clear a base primary",
+   les_p1_misfilter_status(no_structure(rows(18, applied = TRUE)), primary = "base"), "")
 
 # The mis-filter-retained variant (LES_P1_KEEP_MISFILTERED=1) deliberately keeps the four
 # datasets, so its records read as stale by construction. They must not be counted against
@@ -122,9 +130,29 @@ ck("a mis-filter-retained refit does not make a clean grid look stale",
    status_for(rbind(rows(18, applied = TRUE),
                     rows(18, applied = FALSE, keep = TRUE))), "")
 ck("the mis-filter-retained refits alone cannot clear the marker",
-   grepl("^PENDING", status_for(rows(18, applied = FALSE, keep = TRUE))), TRUE)
+   pending(status_for(rows(18, applied = FALSE, keep = TRUE))), TRUE)
 ck("the variant carries its own tagged model id",
    row_for(1, applied = FALSE, keep = TRUE)$model, "erp_1_keepmisfiltered")
+
+# --- The decoding seed's default, repeated by necessity ----------------------
+# 09_run_decoding.R and hpc/08_decoding.slurm each carry the literal default of
+# LES_DECODE_SEED, and 03_fit_brms_erp.R records LES_P1_DECODE_SEED_DEFAULT into
+# results/_provenance.csv as the seed the decoding ran under. The record is only right
+# while the three agree, so the two literals are read back and compared here.
+.seed_literal <- function(file, pattern) {
+  hit <- grep(pattern, readLines(here::here("paper_1_transfer", file), warn = FALSE),
+              value = TRUE)
+  if (length(hit) != 1L) return(NA_character_)
+  regmatches(hit, regexpr("[0-9]{6,}", hit))
+}
+ck("09_run_decoding.R defaults LES_DECODE_SEED to LES_P1_DECODE_SEED_DEFAULT",
+   .seed_literal(file.path("scripts", "09_run_decoding.R"),
+                 '^LES_DECODE_SEED\\s*<-.*Sys\\.getenv\\("LES_DECODE_SEED"'),
+   as.character(LES_P1_DECODE_SEED_DEFAULT))
+ck("hpc/08_decoding.slurm exports the same default",
+   .seed_literal(file.path("hpc", "08_decoding.slurm"),
+                 '^export LES_DECODE_SEED='),
+   as.character(LES_P1_DECODE_SEED_DEFAULT))
 
 cat(sprintf("\n%d passed, %d failed\n", .pass, .fail))
 if (.fail > 0) quit(status = 1)

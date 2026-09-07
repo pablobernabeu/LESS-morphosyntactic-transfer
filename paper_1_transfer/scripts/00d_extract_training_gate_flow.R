@@ -98,7 +98,7 @@ if (!exists("data_path"))             source(here::here("_shared", "R", "00_path
 if (!exists("behavioural_lab_path"))  source(here::here("_shared", "R", "03_data_manifest.R"))
 
 GATE_THRESHOLD_PCT <- 80         # pre-registered pass mark (> 80%)
-ERP_SESSIONS       <- c(2, 3, 4, 6)
+# The sessions reconstructed are the ERP sessions, LES_ERP_SESSIONS in the manifest.
 
 # --- Helper: extract the gate signal from ONE csv ----------------------------
 # Returns a one-row tibble: subject, has_test (any scored grammaticality judgements
@@ -227,8 +227,8 @@ session_flow <- function(sess) {
 }
 
 message("[00d] reconstructing training-gate flow for sessions ",
-        paste(ERP_SESSIONS, collapse = ", "))
-flow <- bind_rows(lapply(ERP_SESSIONS, session_flow))
+        paste(LES_ERP_SESSIONS, collapse = ", "))
+flow <- bind_rows(lapply(LES_ERP_SESSIONS, session_flow))
 
 # --- Write to BOTH papers -----------------------------------------------------
 out_paths <- c(

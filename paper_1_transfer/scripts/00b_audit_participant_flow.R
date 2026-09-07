@@ -34,7 +34,7 @@ suppressPackageStartupMessages({
 
 les_participant_matrix <- function() {
 
-  key <- utils::read.csv(data_path("Participant IDs and session progress.csv"),
+  key <- utils::read.csv(participant_key_csv(),
                          stringsAsFactors = FALSE, fileEncoding = "UTF-8-BOM",
                          check.names = TRUE)
   names(key)[1] <- sub("^X\\.U\\.FEFF\\.", "", names(key)[1])
@@ -72,7 +72,7 @@ les_participant_matrix <- function() {
   # check below compares like with like, but they are not identical by construction:
   # a participant contributing only ancillary-violation cells would count here and not
   # there.
-  erp_f <- data_path("EEG_trial_count_per_condition.csv")
+  erp_f <- erp_trial_count_csv()
   m$usable_erp <- if (file.exists(erp_f))
     present(unique(utils::read.csv(erp_f, stringsAsFactors = FALSE)$participant_lab_ID)) else NA
 
@@ -129,12 +129,13 @@ les_flow_inconsistencies <- function(m) {
 
   # (1) Data without attendance. An analysis stage that contains a participant who
   #     never attended the session producing it cannot be right.
+  erp_attendance <- paste0("attended_S", LES_ERP_SESSIONS)
   stage_needs <- list(
-    usable_accuracy  = c("attended_S2", "attended_S3", "attended_S4", "attended_S6"),
-    usable_erp       = c("attended_S2", "attended_S3", "attended_S4", "attended_S6"),
+    usable_accuracy  = erp_attendance,
+    usable_erp       = erp_attendance,
     battery_baseline = "attended_S1",
     usable_rseeg     = "attended_S2",
-    trajectory       = c("attended_S2", "attended_S3", "attended_S4", "attended_S6")
+    trajectory       = erp_attendance
   )
   for (st in names(stage_needs)) {
     if (all(is.na(m[[st]]))) next
@@ -168,7 +169,8 @@ les_flow_inconsistencies <- function(m) {
   # (4) Identity integrity.
   add("duplicate_lab_ID", unique(m$participant_lab_ID[duplicated(m$participant_lab_ID)]),
       "lab ID appears more than once in the participant key", "error")
-  dup_home <- m$participant_home_ID[duplicated(m$participant_home_ID) & !.blank(m$participant_home_ID)]
+  dup_home <- m$participant_home_ID[duplicated(m$participant_home_ID) &
+                                      !.blank(m$participant_home_ID)]
   add("duplicate_home_ID", m$participant_lab_ID[m$participant_home_ID %in% dup_home],
       "home ID maps to more than one lab ID", "error")
   add("missing_lab_ID", which(is.na(m$participant_lab_ID)),
@@ -182,9 +184,11 @@ les_flow_inconsistencies <- function(m) {
   # (6) ERP data but no behavioural data, and vice versa. The two are collected on
   #     the SAME trials, so a participant in one and not the other needs explaining.
   if (!all(is.na(m$usable_erp))) {
-    add("erp_without_accuracy", m$participant_lab_ID[m$usable_erp %in% TRUE & !(m$usable_accuracy %in% TRUE)],
+    add("erp_without_accuracy",
+        m$participant_lab_ID[m$usable_erp %in% TRUE & !(m$usable_accuracy %in% TRUE)],
         "has usable ERP data but no usable grammaticality-judgement data", "warning")
-    add("accuracy_without_erp", m$participant_lab_ID[m$usable_accuracy %in% TRUE & !(m$usable_erp %in% TRUE)],
+    add("accuracy_without_erp",
+        m$participant_lab_ID[m$usable_accuracy %in% TRUE & !(m$usable_erp %in% TRUE)],
         "has usable judgement data but no usable ERP data", "warning")
   }
 
@@ -237,10 +241,12 @@ les_flow_inconsistencies <- function(m) {
 les_write_flow_audit <- function() {
   m <- les_participant_matrix()
   inc <- les_flow_inconsistencies(m)
-  for (f in c(paper1_results("_participant_matrix.csv"), paper2_results("_participant_matrix.csv"))) {
+  for (f in c(paper1_results("_participant_matrix.csv"),
+              paper2_results("_participant_matrix.csv"))) {
     les_assert_readonly_data(f); utils::write.csv(m, f, row.names = FALSE)
   }
-  for (f in c(paper1_results("_flow_inconsistencies.csv"), paper2_results("_flow_inconsistencies.csv"))) {
+  for (f in c(paper1_results("_flow_inconsistencies.csv"),
+              paper2_results("_flow_inconsistencies.csv"))) {
     les_assert_readonly_data(f); utils::write.csv(inc, f, row.names = FALSE)
   }
   message(sprintf("[flow-audit] %d participants; %d inconsistency row(s) across %d check(s)",

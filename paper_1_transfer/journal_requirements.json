@@ -3,22 +3,51 @@
   "publisher": "Elsevier",
   "article_type": "Empirical report (regular article)",
   "guidelines_url": "https://www.sciencedirect.com/journal/journal-of-neurolinguistics/publish/guide-for-authors",
-  "guidelines_checked": "2026-09-01",
+  "guidelines_checked": "2026-09-06",
+  "guide_access_note": "Retried on 2026-09-06 by both routes: elsevier.com/journals/journal-of-neurolinguistics/09116044/guide-for-authors returns 301 to sciencedirect.com/science/journal/09116044/publish/guide-for-authors, which returns HTTP 403. An indexed snippet of the guide corroborates the highlights rule (3 to 5 bullets, at most 85 characters including spaces) and gives no article word limit, so the null word_limit_body below still stands unverified first-hand.",
+  "pages_read_2026_09_04": [
+    "https://www.elsevier.com/about/policies-and-standards/generative-ai-policies-for-journals",
+    "https://www.elsevier.com/researcher/author/policies-and-guidelines/credit-author-statement",
+    "https://www.elsevier.com/about/policies-and-standards/publishing-ethics"
+  ],
+  "pages_not_readable_2026_09_04": [
+    "https://www.sciencedirect.com/journal/journal-of-neurolinguistics/publish/guide-for-authors (HTTP 403)",
+    "https://www.elsevier.com/journals/journal-of-neurolinguistics/0911-6044/guide-for-authors (redirects to ScienceDirect, HTTP 403)"
+  ],
   "word_limit_body": null,
-  "word_limit_counts": "No stated body word limit in the Guide for Authors",
+  "word_limit_counts": "No body word limit recorded at the 2026-09-01 read; not re-verifiable on 2026-09-04",
   "abstract_word_limit": 250,
+  "abstract_limit_verified": "2026-09-01 only",
   "structured_abstract": false,
   "abstract_headings": [],
-  "keywords_range": [1, 7],
+  "keywords_range": [
+    1,
+    7
+  ],
   "max_display_items": null,
   "max_figures": null,
   "max_tables": null,
   "max_references": null,
-  "required_sections": ["numbered sections 1, 1.1, 1.1.1", "Acknowledgements before references", "CRediT author statement", "Declaration of competing interests", "Funding", "Data statement (research data Option C: deposit, cite and link, or explain)"],
+  "required_sections": [
+    "Numbered sections 1, 1.1, 1.1.1 (2026-09-01 read)",
+    "Ethics statement with committee, date and reference number, compliance with laws and institutional guidelines, privacy rights observed, informed consent",
+    "Declaration of generative AI and AI-assisted technologies in the manuscript preparation process (end of manuscript, before references); research-process AI use described in Methods",
+    "CRediT authorship contribution statement",
+    "Funding",
+    "Declaration of competing interest",
+    "Acknowledgements",
+    "Data availability statement"
+  ],
   "reference_style": "APA 7",
   "reporting_standard": null,
   "data_availability_required": true,
   "code_availability_required": false,
-  "preprint_policy": "Preprint sharing allowed (Elsevier sharing policy); free SSRN posting offered",
-  "notes": "Highlights required at submission: 3-5 bullets, max 85 chars each. Abstract must stand alone, avoid references. Appendices labelled A, B; figures within them Fig. A.1 etc. Footnotes sparingly. Colour figures must be accessible to impaired colour vision. Single-anonymised review. American or British English, not a combination. Ethics statement with approval date and reference number required."
+  "preprint_policy": "Preprint sharing allowed (Elsevier sharing policy)",
+  "review_model": "Single anonymised, at least two reviewers (indexed snippet of the guide; not read first-hand)",
+  "highlights": "Required at submission: 3 to 5 bullets, at most 85 characters each including spaces (submission/highlights.md)",
+  "genai_declaration_wording": "During the preparation of this work, the author(s) used [NAME OF TOOL / SERVICE] in order to [REASON]. After using this tool/service, the author(s) reviewed and edited the content as needed and take(s) full responsibility for the content of the published article.",
+  "genai_artwork": "Not permitted",
+  "language": "American or British usage is accepted, but not a mixture of these",
+  "related_submissions": "Guide clause not readable on 2026-09-04; Elsevier ethics policy: do not publish essentially the same research in more than one journal; disclose the companion in the cover letter and supply a copy",
+  "notes": "Appendices A, B with Table A.1 and Fig. A.1 labelling (2026-09-01 read); colour figures must be legible to readers with impaired colour vision; declarations Word file uploaded at the attach/upload files step (submission/declarations.md)."
 }

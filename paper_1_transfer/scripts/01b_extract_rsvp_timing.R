@@ -18,6 +18,13 @@
 # together with supporting context (per-session counts, the minimum onset of the
 # SECOND subsequent word, exclusion tallies, and provenance fields).
 #
+# paper_1_transfer/results/_rsvp_timing.csv -- the same census as ONE row, which the
+# manuscript reads. data_derived/ is not in version control, so a fresh clone would
+# otherwise render the timing sentences as pending; results/ is tracked, and the values
+# can be checked against the archive. Its columns are every scalar field of the list
+# above, under the same names, plus the per-session counts as n_trials_s<session>, the
+# exclusion tallies as n_rows_excluded_<reason>, and n_files_skipped.
+#
 # WHY THIS QUANTITY MATTERS
 # -------------------------
 # Paper 1's late analysis window runs 400--900 ms after critical-word onset. The
@@ -93,14 +100,18 @@
 #
 # OUTPUT CONTRACT
 # ---------------
-# Idempotent; writes only the single .rds under paper_1_transfer/data_derived/
-# (guarded by les_assert_readonly_data), and runs locally via
+# Idempotent; writes the .rds under paper_1_transfer/data_derived/ and the one-row CSV
+# under paper_1_transfer/results/ (both guarded by les_assert_readonly_data), and runs
+# locally via
 #   Rscript paper_1_transfer/scripts/01b_extract_rsvp_timing.R
+# The counting window and the plausibility bound on the onset-to-onset step are
+# LES_P1_RSVP_WINDOW_MS and LES_P1_RSVP_SOA_MAX_MS in _config.R.
 # =============================================================================
 
 suppressPackageStartupMessages({
   source(here::here("_shared", "R", "00_paths.R"))
   source(here::here("_shared", "R", "03_data_manifest.R"))
+  source(here::here("paper_1_transfer", "scripts", "_config.R"))
   library(readr)
 })
 
@@ -197,13 +208,13 @@ build_rsvp_timing <- function() {
       if (is.na(D[i, cp[i]])) { excl["missing_duration"] <- excl["missing_duration"] + 1L; next }
 
       offsets <- ons[(cp[i] + 1L):n_words] - ons[cp[i]]
-      if (offsets[1L] <= 0 || offsets[1L] > 5000) {
+      if (offsets[1L] <= 0 || offsets[1L] > LES_P1_RSVP_SOA_MAX_MS) {
         excl["soa_out_of_range"] <- excl["soa_out_of_range"] + 1L; next
       }
 
       f_on[i]  <- offsets[1L]
       s_on[i]  <- if (length(offsets) >= 2L) offsets[2L] else NA_real_
-      n_900[i] <- sum(offsets > 0 & offsets <= 900)
+      n_900[i] <- sum(offsets > 0 & offsets <= LES_P1_RSVP_WINDOW_MS)
       d_key[i] <- paste(files[[k]], df$trial[i], ons[cp[i]])
     }
 
@@ -239,9 +250,30 @@ build_rsvp_timing <- function() {
     n_rows_excluded         = excl,
     # --- provenance ----------------------------------------------------------
     source_dir    = "data/raw data/behavioural data from lab sessions",
-    window_rule   = "subsequent onsets counted when offset is in (0, 900] ms",
+    window_rule   = sprintf("subsequent onsets counted when offset is in (0, %d] ms",
+                            LES_P1_RSVP_WINDOW_MS),
     generated_utc = format(Sys.time(), tz = "UTC", usetz = TRUE)
   )
+}
+
+# --- The census as one row, for results/_rsvp_timing.csv ----------------------
+# Every scalar field keeps its name. The per-session table becomes n_trials_s<session>,
+# the exclusion tallies n_rows_excluded_<reason>, and the skipped-file list its length.
+.les_rsvp_timing_row <- function(timing) {
+  row <- list()
+  for (nm in names(timing)) {
+    v <- timing[[nm]]
+    if (nm == "n_trials_by_session") {
+      for (s in names(v)) row[[paste0("n_trials_s", s)]] <- as.integer(v[[s]])
+    } else if (nm == "n_rows_excluded") {
+      for (r in names(v)) row[[paste0("n_rows_excluded_", r)]] <- as.integer(v[[r]])
+    } else if (nm == "skipped_files") {
+      row[["n_files_skipped"]] <- length(v)
+    } else if (is.atomic(v) && length(v) == 1L) {
+      row[[nm]] <- v
+    }
+  }
+  as.data.frame(row, stringsAsFactors = FALSE, check.names = FALSE)
 }
 
 # =============================================================================
@@ -253,6 +285,11 @@ build_rsvp_timing <- function() {
   out_path <- paper1_derived("rsvp_timing_overlap.rds")
   les_assert_readonly_data(out_path)
   saveRDS(timing, out_path)
+
+  csv_path <- paper1_results("_rsvp_timing.csv")
+  les_assert_readonly_data(csv_path)
+  utils::write.csv(.les_rsvp_timing_row(timing), csv_path, row.names = FALSE)
+  message("[rsvp_timing] wrote ", basename(csv_path))
 
   message(sprintf(
     paste0("[rsvp_timing] saved %s: n_trials=%d, first subsequent onset ",
@@ -270,7 +307,9 @@ build_rsvp_timing <- function() {
                 sep = "=", collapse = ", "),
           "; duplicate session-close rows counted: ", timing$n_duplicate_rows,
           "; files skipped: ",
-          if (length(timing$skipped_files)) paste(timing$skipped_files, collapse = ", ") else "none",
+          if (length(timing$skipped_files)) {
+            paste(timing$skipped_files, collapse = ", ")
+          } else "none",
           "; rows excluded: ",
           paste(names(timing$n_rows_excluded), unname(timing$n_rows_excluded),
                 sep = "=", collapse = ", "))

@@ -202,17 +202,19 @@ extract_paper1_property_macroregion <- function(property, macroregion) {
   stopifnot(property %in% names(LES_P1_PROPERTIES),
             macroregion %in% LES_P1_MACROREGIONS)
 
-  # Bound the load to [200, 898] ms (covers all three windows) plus the baseline
-  # (include_baseline keeps time < 0). Load samples un-aggregated so we can window
-  # and aggregate correctly ourselves; the importer's own aggregation/z-scoring is
-  # intentionally bypassed (see header). Memory peak equals a single-property load,
-  # well within the established descriptive pipeline's footprint.
-  source(data_path("R_functions", "merge_trialbytrial_EEG_data.R"))  # lazy: heavy loader
+  # Bound the load to the span of the three analysis windows (200 to 898 ms, read off
+  # LES_P1_WINDOWS) plus the baseline (include_baseline keeps time < 0). Load samples
+  # un-aggregated so we can window and aggregate correctly ourselves; the importer's own
+  # aggregation/z-scoring is intentionally bypassed (see header). Memory peak equals a
+  # single-property load, well within the established descriptive pipeline's footprint.
+  load_min <- min(vapply(LES_P1_WINDOWS, function(w) w[["min_ms"]], numeric(1)))
+  load_max <- max(vapply(LES_P1_WINDOWS, function(w) w[["max_ms"]], numeric(1)))
+  source(legacy_eeg_loader())  # lazy: heavy loader
   message("[extract] loading ", property, " / ", macroregion, " ...")
   raw <- merge_trialbytrial_EEG_data(
     EEG_file_pattern      = les_p1_file_pattern(property),
-    min_time              = 200,
-    max_time              = 898,
+    min_time              = load_min,
+    max_time              = load_max,
     include_baseline      = TRUE,
     aggregate_electrodes  = FALSE,
     aggregate_time_points = FALSE,

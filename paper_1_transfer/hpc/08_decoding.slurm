@@ -74,6 +74,8 @@ STAGE="${LES_DECODE_STAGE:-per_property}"
 # DOWN only for a smoke test (see the header).
 export LES_DECODE_NPERM="${LES_DECODE_NPERM:-1000}"
 export LES_DECODE_TIME_STEP_MS="${LES_DECODE_TIME_STEP_MS:-4}"   # 4 ms decoding grid
+# The seed default is LES_P1_DECODE_SEED_DEFAULT in scripts/_config.R, repeated here and in
+# 09_run_decoding.R; scripts/test_exclusion_guard.R checks that the three agree.
 export LES_DECODE_SEED="${LES_DECODE_SEED:-20260702}"
 
 PROPS=(gender_agreement differential_object_marking verb_object_number_agreement)
@@ -101,5 +103,14 @@ Rscript "paper_1_transfer/scripts/08_extract_decoding_matrices.R" "${PROP}" \
 #     separate cross_property stage above.
 Rscript "paper_1_transfer/scripts/09_run_decoding.R" "${PROP}" all \
     > "paper_1_transfer/hpc/logs/09_decoding_${PROP}.Rout" 2>&1
+
+# (3) Record the settings this job exported, beside the decoding artefacts. The ERP
+#     fitting run's provenance record carries only a default for the decoding seed, since
+#     no decoding job sets it there, so the manuscript reads the decoding seed from this
+#     record. Every array element writes the same values, so the file is idempotent.
+NOW="$(date -u +%FT%TZ)"
+printf 'component,version,recorded_utc\nseed:LES_DECODE_SEED,%s,%s\nLES_DECODE_NPERM,%s,%s\nLES_DECODE_TIME_STEP_MS,%s,%s\n' \
+    "${LES_DECODE_SEED}" "${NOW}" "${LES_DECODE_NPERM}" "${NOW}" "${LES_DECODE_TIME_STEP_MS}" "${NOW}" \
+    > "${LES_STORE}/paper_1_transfer/results/_decoding_provenance.csv"
 
 echo "[decoding array ${SLURM_ARRAY_TASK_ID}] ${PROP} finished $(date)"

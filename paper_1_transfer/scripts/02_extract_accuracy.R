@@ -107,6 +107,11 @@ suppressPackageStartupMessages({
 .les_acc_cols <- c("correct", "response_time", "grammaticality",
                    "grammatical_property", "trial", "subject_nr", "session_part")
 
+# The logged sentence, if the logfile carries one under this name. It feeds the sentence
+# inventory below and is dropped before any derived file is written, so the modelled
+# data are unchanged by it.
+.les_acc_sentence_col <- "sentence"
+
 # --- Read one subject x session logfile, keeping only the needed columns ------
 .read_one_logfile <- function(file, session_label) {
   df <- suppressWarnings(readr::read_csv(
@@ -114,7 +119,9 @@ suppressPackageStartupMessages({
     col_types = readr::cols(.default = readr::col_character()),
     show_col_types = FALSE, progress = FALSE
   ))
-  df <- df[, intersect(names(df), .les_acc_cols), drop = FALSE]
+  sent <- names(df)[tolower(names(df)) == .les_acc_sentence_col][1]
+  df <- df[, intersect(names(df), c(.les_acc_cols, sent)), drop = FALSE]
+  if (!is.na(sent)) names(df)[names(df) == sent] <- "sentence_text"
   df$session <- session_label
   # Lab ID from the file name (robust; matches the EEG participant_lab_ID space).
   df$participant_lab_ID <- as.integer(stringr::str_extract(basename(file), "(?<=subject-)[0-9]+"))
@@ -167,10 +174,55 @@ suppressPackageStartupMessages({
   have    <- !is.na(acc$multilingual_language_diversity)
   missing <- sort(unique(acc$participant_lab_ID[!have]))
   message(sprintf(
-    "[accuracy] LES_P1_ACC_DIVERSITY=1: diversity score attached for %d participants; missing for %d%s",
+    paste0("[accuracy] LES_P1_ACC_DIVERSITY=1: diversity score attached for %d participants;",
+           " missing for %d%s"),
     dplyr::n_distinct(acc$participant_lab_ID[have]), length(missing),
     if (length(missing)) paste0(" (lab ID ", paste(missing, collapse = ", "), ")") else ""))
   acc
+}
+
+# --- Census of unreadable logfiles -------------------------------------------
+# Two export formats leave a participant-session out of the extraction: a run split
+# across subject-N-test.csv and subject-N-experiment.csv, which the file pattern does not
+# match, and a semicolon-delimited export, which the comma-delimited reader parses as one
+# column and the Experiment filter then drops whole. Both are recorded here, one row per
+# affected file, in results/_accuracy_input_gaps.csv. A suffixed file beside a plain
+# subject-N.csv for the same participant and session is an unread extra export, not a
+# gap, because the plain file carries that participant's run; it is recorded under its
+# own reason so that the manuscript's count of lost participants excludes it.
+.les_write_input_gaps <- function(files, sessions) {
+  all_files <- unlist(lapply(sessions, function(s) {
+    list.files(behavioural_lab_path(paste("Session", s)),
+               pattern = "^subject-.*\\.csv$", full.names = TRUE)
+  }))
+  unmatched <- setdiff(all_files, files)
+  has_plain <- vapply(unmatched, function(f) {
+    id <- stringr::str_extract(basename(f), "(?<=subject-)[0-9]+")
+    file.exists(file.path(dirname(f), paste0("subject-", id, ".csv")))
+  }, logical(1))
+  split_files <- unmatched[!has_plain]
+  extra_files <- unmatched[has_plain]
+  is_semi <- vapply(files, function(f) {
+    h <- readLines(f, n = 1L, warn = FALSE)
+    lengths(regmatches(h, gregexpr(";", h, fixed = TRUE))) >
+      lengths(regmatches(h, gregexpr(",", h, fixed = TRUE)))
+  }, logical(1))
+  gap_files <- c(split_files, files[is_semi], extra_files)
+  gaps <- data.frame(
+    reason  = c(rep("split_export", length(split_files)),
+                rep("semicolon_delimited", sum(is_semi)),
+                rep("unread_extra_export", length(extra_files))),
+    file    = basename(gap_files),
+    session = as.integer(stringr::str_extract(gap_files, "(?<=Session )[0-9]+")),
+    participant_lab_ID = as.integer(stringr::str_extract(basename(gap_files),
+                                                         "(?<=subject-)[0-9]+")),
+    stringsAsFactors = FALSE)
+  gap_path <- paper1_results(paste0("_accuracy_input_gaps", les_p1_acc_diversity_tag(), ".csv"))
+  les_assert_readonly_data(gap_path)
+  utils::write.csv(gaps, gap_path, row.names = FALSE)
+  message(sprintf("[accuracy] input-gap census: %d split exports, %d semicolon-delimited logs",
+                  length(split_files), sum(is_semi)))
+  invisible(gaps)
 }
 
 # =============================================================================
@@ -184,6 +236,12 @@ build_paper1_accuracy <- function() {
                pattern = "^subject-\\d+\\.csv$", full.names = TRUE)
   }))
   if (!length(files)) stop("No behavioural logfiles found under ", behavioural_lab_path())
+
+  # Census of the logfiles this extraction cannot read (see TWO GAPS IN THE SESSION-4
+  # INPUT above), written so that the Method reports the participants concerned from an
+  # artefact. The reader and the file pattern stay as they are, so the extracted data are
+  # unchanged by it.
+  .les_write_input_gaps(files, sessions)
 
   session_of <- as.integer(stringr::str_extract(files, "(?<=Session )[0-9]+"))
 
@@ -226,21 +284,22 @@ build_paper1_accuracy <- function() {
       !is.na(correct), correct %in% c(0, 1)
     )
 
-  # Reaction-time bounds carried over unchanged from the legacy import script so
-  # that both pipelines analyse the same trials. That script records no rationale
-  # for 200 and 4000 ms, and none is derived here; they are kept for comparability.
-  # The share of otherwise-valid judgement trials the screen removes is written to
-  # results/_accuracy_rt_screen.csv so the manuscript reports the screening step
-  # with a quantity rather than leaving it undocumented.
+  # Reaction-time bounds (LES_P1_ACC_RT_MS in _config.R) carried over unchanged from the
+  # legacy import script so that both pipelines analyse the same trials. That script
+  # records no rationale for 200 and 4000 ms, and none is derived here; they are kept
+  # for comparability. The share of otherwise-valid judgement trials the screen removes
+  # is written to results/_accuracy_rt_screen.csv so the manuscript reports the
+  # screening step with a quantity.
   n_valid <- nrow(acc)
-  acc <- acc %>% filter(response_time > 200, response_time < 4000)
+  acc <- acc %>% filter(response_time > LES_P1_ACC_RT_MS[1],
+                        response_time < LES_P1_ACC_RT_MS[2])
   rt_screen <- data.frame(
     n_valid_trials  = n_valid,
     n_kept          = nrow(acc),
     n_rt_excluded   = n_valid - nrow(acc),
     pct_rt_excluded = 100 * (n_valid - nrow(acc)) / n_valid,
-    rt_min_ms       = 200,
-    rt_max_ms       = 4000
+    rt_min_ms       = LES_P1_ACC_RT_MS[1],
+    rt_max_ms       = LES_P1_ACC_RT_MS[2]
   )
   # The diversity variant writes the same screen under its own name, so the reported
   # file is never rewritten by an opt-in run (its content would be identical).
@@ -268,11 +327,9 @@ build_paper1_accuracy <- function() {
         mini_language == "Mini-English"   ~ -0.5
       ),
       # Session time coding 0,1,2,3 for Sessions 2,3,4,6 (growth-curve coding,
-      # Michael Clark; matches the ERP `recoded_session`).
-      recoded_session = case_when(
-        session == 2 ~ 0, session == 3 ~ 1,
-        session == 4 ~ 2, session == 6 ~ 3
-      ),
+      # Michael Clark; matches the ERP `recoded_session`): the session's position in
+      # LES_ERP_SESSIONS, counted from zero.
+      recoded_session = match(session, LES_ERP_SESSIONS) - 1,
       participant_lab_ID = factor(participant_lab_ID),
       session            = factor(session, levels = LES_ERP_SESSIONS),
       mini_language      = factor(mini_language, levels = c("Mini-Norwegian", "Mini-English"))
@@ -284,8 +341,37 @@ build_paper1_accuracy <- function() {
 # =============================================================================
 # Entry point: write one standardised file per property
 # =============================================================================
+# --- Sentence inventory --------------------------------------------------------
+# The Method says the judgement sentences are generated combinatorially and so form no
+# shared item factor. The count behind that claim, distinct sentences against judgement
+# trials per session, is written here from the logged sentence text, over the trials that
+# reach the models. When the logfiles carry no sentence column every count is NA, and the
+# manuscript prints its marker in place of the number.
+.les_write_sentence_inventory <- function(acc) {
+  has_text <- "sentence_text" %in% names(acc) && any(!is.na(acc$sentence_text))
+  inv <- acc %>%
+    dplyr::mutate(session = as.integer(as.character(session))) %>%
+    dplyr::group_by(session) %>%
+    dplyr::summarise(
+      n_trials             = dplyr::n(),
+      n_participants       = dplyr::n_distinct(participant_lab_ID),
+      n_distinct_sentences = if (has_text) dplyr::n_distinct(sentence_text[!is.na(sentence_text)])
+                             else NA_integer_,
+      .groups = "drop"
+    )
+  inv_path <- paper1_results(paste0("_accuracy_sentence_inventory",
+                                    les_p1_acc_diversity_tag(), ".csv"))
+  les_assert_readonly_data(inv_path)
+  utils::write.csv(inv, inv_path, row.names = FALSE)
+  message(sprintf("[accuracy] sentence inventory written (%s)",
+                  if (has_text) "sentence text found" else "no sentence column in the logs"))
+  invisible(inv)
+}
+
 .run <- function() {
   acc <- build_paper1_accuracy()
+  .les_write_sentence_inventory(acc)
+  acc$sentence_text <- NULL          # never carried into the derived files
 
   for (property in names(LES_P1_PROPERTIES)) {
     cell <- acc %>%

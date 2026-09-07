@@ -2,48 +2,119 @@
 title: "The Neurocognition of Longitudinal L3 Morphosyntactic Transfer: A Bayesian Single-Trial ERP Study of Three Grammatical Properties in Two Artificial Languages"
 shorttitle: "Longitudinal L3 Morphosyntactic Transfer"
 author:
-  - name: "[Author One]"
+  - name: Pablo Bernabeu
     corresponding: true
-    email: "author.one@example.org"
+    orcid: 0000-0003-1083-2460
+    email: pcbernabeu@gmail.com
     affiliations:
-      - name: "[Institution]"
-  - name: "[Author Two]"
+      # The affiliation that carries the postal address is listed first because the two
+      # outputs build the correspondence note differently: the Word and HTML route takes
+      # the corresponding author's FIRST affiliation (frontmatter.lua), while the PDF
+      # route takes whichever affiliation carries an `address` (title.tex). Listing
+      # Oxford first is what makes them agree. Reordering these two entries changes the
+      # affiliation numbering in the byline and silently drops the street address from
+      # the Word output.
+      - id: oxford
+        name: University of Oxford
+        department: Department of Education
+        address: 15 Norham Gardens
+        city: Oxford
+        postal-code: OX2 6PY
+        country: United Kingdom
+      - id: clabl
+        name: UiT The Arctic University of Norway
+        department: Center for Language, Brain and Learning (C-LaBL)
+        city: Tromsø
+        country: Norway
+  - name: Christina Athanasiadi
     affiliations:
-      - name: "[Institution]"
+      - ref: clabl
+  - name: Stella L. Pischinger
+    affiliations:
+      - ref: clabl
+  - name: Gabriella Silva
+    orcid: 0000-0002-5349-7036
+    affiliations:
+      - ref: nebrija
+  - name: My Ngoc Giang Hoang
+    affiliations:
+      - ref: clabl
+  - name: Vincent DeLuca
+    orcid: 0000-0002-2275-209X
+    affiliations:
+      - ref: clabl
+  - name: Jason Rothman
+    orcid: 0009-0003-3936-6384
+    affiliations:
+      - id: nebrija
+        name: Nebrija University
+        department: Nebrija Research Center in Cognition (CINC)
+        city: Madrid
+        country: Spain
+      - id: lancaster
+        name: Lancaster University
+        department: Department of Linguistics and English Language
+        city: Lancaster
+        country: United Kingdom
+      - ref: clabl
+  - name: Iva Ivanova
+    affiliations:
+      - id: utep
+        name: University of Texas at El Paso
+        department: Department of Psychology
+        city: El Paso
+        region: Texas
+        country: United States
+  - name: Claudia Poch
+    orcid: 0000-0002-9357-4948
+    affiliations:
+      - ref: nebrija
+  - name: Jorge González Alonso
+    orcid: 0000-0001-5047-3226
+    affiliations:
+      - ref: clabl
+      - ref: nebrija
 abstract: |
   Theories of third-language (L3) morphosyntactic transfer disagree over whether
-  prior-language influence is wholesale or property-by-property, and over how it
-  consolidates. We tracked electrophysiological and behavioural signatures of
+  prior-language influence is wholesale or property-by-property, and are silent on
+  how it consolidates. We tracked electrophysiological and behavioural signatures of
   three properties (subject--verb gender agreement, differential object marking,
   verb--object number agreement) as Norwegian--English bilinguals acquired
-  Mini-English or Mini-Norwegian over four sessions, from first exposure to
-  post-consolidation retention. Single-trial event-related potential (ERP)
+  Mini-English or Mini-Norwegian over four sessions, from the first post-training
+  session to post-consolidation retention. Single-trial event-related potential (ERP)
   amplitudes and judgement accuracy were analysed in Bayesian multilevel models
   with informative priors. Gender agreement, whose Mini-Norwegian realisation
   aligns with the learners' first language, produced a grammaticality effect that
-  grew with training. Freed from that trend, the average change across the
-  unrehearsed interval was no longer credible, though the languages differed
-  credibly. The effect held where the first language supplies the same structure
-  and eroded where it does not. That is a group difference, not either
-  group's own trajectory. Behaviourally, the same property favoured
-  Mini-Norwegian learners, the design's only first-language-congruent advantage.
-  Differential object marking yielded a transient early effect, a late
-  language-conditioned modulation and a behavioural decline at retention.
-  Verb--object number agreement, novel to both prior languages, strengthened
-  across the retention interval, and within groups only for Mini-Norwegian
-  learners. In whole-scalp decoding, only gender agreement separated the
-  conditions on a baseline at chance. Descriptively, no property's pattern
+  grew with training. In a refit that freed the retention session from that trend,
+  the effect at retention did not depart credibly from the trend on average, but the
+  two languages diverged credibly, the Mini-English estimate falling below the
+  Mini-Norwegian one. Only the group difference is supported. Behaviourally, the
+  same property favoured Mini-Norwegian learners, the design's only
+  first-language-congruent advantage. Differential object marking yielded a
+  transient early effect, a late language-conditioned modulation and a behavioural
+  decline at retention. Verb--object number agreement, novel to both prior
+  languages, strengthened across the retention interval, and within groups only for
+  Mini-Norwegian learners. In whole-scalp decoding, only gender agreement separated
+  the conditions on a baseline at chance. Descriptively, no property's pattern
   generalised to another, consistent with property-specific coding. Both novel
-  properties showed source-language modulations of opposite sign, unexplained. Transfer confined to gender
-  agreement, and growing across sessions, fits a property-by-property account
-  better than a wholesale one, though one dissociating property leaves the
-  conclusion provisional.
+  properties showed source-language modulations of opposite sign, unexplained. The
+  growth of the gender-agreement advantage across sessions favours a
+  property-by-property account over a wholesale one, though one dissociating
+  property leaves the conclusion provisional.
 keywords: [L3 acquisition, morphosyntactic transfer, ERP, artificial language, Bayesian multilevel models, retention]
 bibliography: references.bib
 floatsintext: true
+author-note:
+  correspondence-note: >
+    Correspondence concerning this article should be addressed to Pablo Bernabeu,
+    Department of Education, University of Oxford, 15 Norham Gardens, Oxford OX2 6PY,
+    United Kingdom, Email: pcbernabeu@gmail.com; or Jorge González Alonso, Nebrija
+    Research Center in Cognition (CINC), Nebrija University, Calle de Asura 90, 28043
+    Madrid, Spain, Email: jgonzalezal@nebrija.es.
 format:
   apaquarto-pdf:
     documentmode: man
+    pdf-engine: lualatex
     include-in-header:
       - text: |
           % apaquarto's template decrements the table counter at the end of every
@@ -68,10 +139,21 @@ format:
           % caption.sty is already loaded by the apa7 class, so only its settings are
           % adjusted here; loading it again risks an option clash.
           \captionsetup{aboveskip=10pt, belowskip=10pt}
-          \setlength{\abovedisplayskip}{6pt plus 2pt minus 2pt}
-          \setlength{\belowdisplayskip}{6pt plus 2pt minus 2pt}
-          \setlength{\abovedisplayshortskip}{3pt plus 1pt minus 1pt}
-          \setlength{\belowdisplayshortskip}{3pt plus 1pt minus 1pt}
+          % apa7 forces \flushbottom, which stretches the flexible vertical glue
+          % between paragraphs when a page happens to end unevenly. In a double-
+          % spaced manuscript that can create conspicuous, page-specific gaps in
+          % the running text. Keep paragraph spacing stable and let the page bottom
+          % remain naturally ragged instead.
+          \raggedbottom
+          % Keep multi-line displays compact without changing the manuscript's
+          % double spacing in ordinary prose.
+          \AtBeginDocument{%
+            \setlength{\jot}{0pt}%
+            \setlength{\abovedisplayskip}{4pt}%
+            \setlength{\belowdisplayskip}{4pt}%
+            \setlength{\abovedisplayshortskip}{2pt}%
+            \setlength{\belowdisplayshortskip}{2pt}%
+          }
           % Heading spacing is left to the apa7 class. The titlesec package cannot parse
           % that class's redefined heading levels: it fails at \ttl@extract\subparagraph
           % with 'Argument of \subparagraph has an extra }', and the document does not
@@ -84,10 +166,17 @@ format:
           % rather than being scaled, and its column headers then collide.
           \usepackage{etoolbox}
           \usepackage{graphicx}
-          \AtBeginEnvironment{longtable}{\small}
+          \usepackage{needspace}
+           \AtBeginEnvironment{longtable}{\footnotesize\setlength{\tabcolsep}{3pt}}
           \makeatletter
           \g@addto@macro\@floatboxreset{\centering}
           \makeatother
+    # cairo_pdf embeds the fonts it uses and renders the Unicode minus, micro and
+    # multiplication signs the figures contain; R's default pdf() device references
+    # Helvetica without embedding it, which submission systems flag.
+    knitr:
+      opts_chunk:
+        dev: "cairo_pdf"
   apaquarto-html: default
   apaquarto-docx:
     fig-dpi: 600
@@ -121,6 +210,9 @@ suppressPackageStartupMessages({
   source(here::here("_shared", "R", "00_paths.R"))
   source(here::here("_shared", "R", "05_funnel.R"))   # les_funnel(), shared with Paper 2
   source(here::here("paper_1_transfer", "scripts", "_config.R"))
+  # les_theme(), les_div, the number formatters, .read_csv_if(), prov(), flow_n() and
+  # pstat(), shared with Paper 2 so both manuscripts report by one set of rules.
+  source(here::here("_shared", "R", "06_manuscript_helpers.R"))
   library(dplyr)
   library(ggplot2)
   has_knitr <- requireNamespace("knitr", quietly = TRUE)
@@ -157,20 +249,6 @@ lit_ratio <- function() {
   as.character(round(a / b))
 }
 
-# Figure theme: depictr when present, base ggplot2 otherwise. Every figure calls
-# les_theme() so a change here propagates to the whole manuscript.
-les_theme <- function(base_size = LES_FIG_BASE_SIZE) {
-  base <- if (has_depictr) depictr::theme_depictr(base_size = base_size)
-          else ggplot2::theme_minimal(base_size = base_size)
-  # The default packs the factor levels tightly enough that the key squares read as
-  # one block; give each entry room.
-  base + ggplot2::theme(
-    legend.key.spacing.y = ggplot2::unit(3, "pt"),
-    legend.key.spacing.x = ggplot2::unit(8, "pt"),
-    legend.text  = ggplot2::element_text(margin = ggplot2::margin(r = 6)),
-    legend.title = ggplot2::element_text(margin = ggplot2::margin(b = 4)))
-}
-
 # Qualitative colour scale for figures that map a discrete variable without a
 # fixed, semantically meaningful palette. depictr's default is Okabe-Ito; the
 # fallback avoids ggplot2's default hues, whose red/green pairing is the least
@@ -180,25 +258,7 @@ les_colour <- function(...) {
   else ggplot2::scale_colour_manual(values = c("#000000", "#0072B2", "#D55E00"), ...)
 }
 
-# Endpoints and midpoint of the diverging scale used for signed quantities (scalp
-# topography here; the predictor correlation matrix in the companion paper). Taken from
-# depictr so both papers share one diverging scale; the fallback is the same
-# ColorBrewer RdBu anchors.
-les_div <- if (has_depictr) depictr::depictr_palette(5, "diverging")[c(5, 3, 1)] else
-  c("#005B96", "#F7F7F7", "#B2182B")
-
-# papaja's number formatters if available; otherwise base-R fallbacks so the
-# document never hard-fails on a missing optional dependency.
-if (requireNamespace("papaja", quietly = TRUE)) {
-  apa_num <- papaja::apa_num
-  apa_p   <- papaja::apa_p
-} else {
-  apa_num <- function(x, digits = 2, ...) formatC(x, format = "f", digits = digits)
-  apa_p   <- function(p, ...) ifelse(p < .001, "< .001", sub("^0", "", formatC(p, format = "f", digits = 3)))
-}
-
 # --- Load pooled artefacts written by script 05 (if they exist) --------------
-.read_csv_if <- function(path) if (file.exists(path)) utils::read.csv(path, stringsAsFactors = FALSE) else NULL
 .lit_tbl <- .read_csv_if(paper1_results("_literature_trend.csv"))  # see lit_n() below
 
 # Computational provenance recorded at fit time by _shared/R/04_provenance.R, so the
@@ -237,59 +297,51 @@ LES_P1_PRIMARY <- "maximal"
 }
 
 .fitmeta_tbl <- .read_csv_if(paper1_results("_pooled_fit_metadata.csv"))
-misfilter_status <- function() {
-  pending <- function(why) paste0(" **[Pending: ", why,
-                                  "; re-run the extraction and model fits to bring the",
-                                  " reported results into line.]**")
-  if (is.null(.fitmeta_tbl)) {
-    return(pending("the results currently shown were computed before this exclusion was applied"))
-  }
-  # The primary analysis is the informative-prior set fitted under the primary
-  # random-effect structure. The weak-prior refits and the other structure are
-  # sensitivity analyses, reported separately and audited with their own records.
-  # Filtering on structure matters: base and maximal fits share a model id, so without
-  # it every cell matches twice and the completeness check below passes on 36 rows that
-  # are really 18 cells fitted two ways.
-  # The mis-filter-retained refits are excluded here for the same reason. They are a
-  # sensitivity analysis that deliberately keeps the four datasets, so their records carry
-  # exclusion_applied = FALSE by design; counting them would make the reported grid look
-  # stale and print a Pending marker over results that are in fact clean. Their model ids
-  # carry a "_keepmisfiltered" tag, and the boolean column is the direct test.
-  m <- .fitmeta_tbl[.fitmeta_tbl$exclusion_applicable %in% TRUE &
-                      .fitmeta_tbl$prior_variant %in% "informative", , drop = FALSE]
-  if ("keep_misfiltered" %in% names(m)) {
-    m <- m[!(m$keep_misfiltered %in% TRUE), , drop = FALSE]
-  }
-  if ("structure" %in% names(m)) {
-    m <- m[m$structure %in% LES_P1_PRIMARY, , drop = FALSE]
-  } else if (!identical(LES_P1_PRIMARY, "base")) {
-    return(pending(paste0("the fit records predate the random-effect-structure column, ",
-                          "so the structure behind the reported fits cannot be confirmed")))
-  }
-  if (nrow(m) == 0) return(pending("no fitted model carries a record of this exclusion"))
-  n_stale <- sum(!(m$exclusion_applied %in% TRUE))
-  if (n_stale > 0) {
-    return(pending(sprintf("%d of %d fitted ERP models still contain these datasets",
-                           n_stale, nrow(m))))
-  }
-  # Every fit that reported in is clean, but a partial refit would also look clean.
-  # Require the audit to cover the whole grid before the claim is allowed to stand.
-  n_expected <- nrow(les_p1_erp_grid())
-  if (nrow(m) < n_expected) {
-    return(pending(sprintf("only %d of the %d ERP models have been refitted under it",
-                           nrow(m), n_expected)))
-  }
-  ""
+
+# Participants in the fitted ERP models of one property, from the fit records. The
+# flow count is taken from the trial-count table, but the models also require the
+# L1-dominance covariate, and a participant without that score is dropped by listwise
+# deletion, so the modelled N can be one short of the usable-EEG N. It is read from the
+# primary structure's informative fits, which all share one N per property.
+erp_model_n <- function(property) {
+  if (is.null(.fitmeta_tbl)) return("NN")
+  m <- .fitmeta_tbl[startsWith(.fitmeta_tbl$model, paste0("erp_", property, "_")) &
+                      !grepl("_retfree|_keepmisfiltered", .fitmeta_tbl$model) &
+                      .fitmeta_tbl$prior_set %in% "informative", , drop = FALSE]
+  if ("structure" %in% names(m)) m <- m[m$structure %in% LES_P1_PRIMARY, , drop = FALSE]
+  v <- unique(m$n_participants)
+  if (length(v) != 1L || is.na(v)) return("NN")
+  as.character(v)
 }
 
-.prov_tbl <- .read_csv_if(paper1_results("_provenance.csv"))
-prov <- function(component, fallback = "*[version pending a pipeline run]*") {
-  if (is.null(.prov_tbl)) return(fallback)
-  r <- .prov_tbl[.prov_tbl$component == component, , drop = FALSE]
+# The decision rule lives in les_p1_misfilter_status() (scripts/_config.R), beside the
+# helpers it audits, and scripts/test_exclusion_guard.R tests that function directly.
+misfilter_status <- function() {
+  why <- les_p1_misfilter_status(.fitmeta_tbl, LES_P1_PRIMARY)
+  if (nzchar(why)) paste0(" **[Pending: ", why,
+                          "; re-run the extraction and model fits to bring the reported",
+                          " results into line.]**") else ""
+}
+
+.prov_tbl <- .read_csv_if(paper1_results("_provenance.csv"))   # read by prov()
+# The decoding job writes its own small provenance record (hpc/08_decoding.slurm), with the
+# seed and permutation settings it actually exported. The ERP fitting run's record carries a
+# default for the decoding seed that no decoding job set, so the decoding value is read from
+# the decoding record and not from the ERP one.
+.dprov_tbl <- .read_csv_if(paper1_results("_decoding_provenance.csv"))
+prov_dec <- function(component, fallback = "*[value pending a decoding run]*") {
+  if (is.null(.dprov_tbl)) return(fallback)
+  r <- .dprov_tbl[.dprov_tbl$component == component, , drop = FALSE]
   if (nrow(r) != 1 || is.na(r$version[1])) return(fallback)
   as.character(r$version[1])
 }
 conv_tbl      <- .read_csv_if(paper1_results("_pooled_convergence.csv"))
+# Number of fitted models whose id matches a pattern, for the composition sentence in the
+# convergence appendix, so the breakdown cannot drift from the injected total.
+conv_n <- function(pattern) {
+  if (is.null(conv_tbl)) return("NN")
+  as.character(sum(grepl(pattern, conv_tbl$model)))
+}
 post_tbl      <- .read_csv_if(paper1_results("_pooled_posterior_summaries.csv"))
 retention_tbl <- .read_csv_if(paper1_results("_retention_contrasts.csv"))
 sens_tbl      <- .read_csv_if(paper1_results("_prior_sensitivity.csv"))
@@ -304,36 +356,79 @@ flow_tbl    <- .read_csv_if(paper1_results("_sample_flow.csv"))
 parts_tbl   <- .read_csv_if(paper1_results("_participants.csv"))
 erp_ret_tbl <- .read_csv_if(paper1_results("_erp_trial_retention.csv"))
 gate_tbl    <- .read_csv_if(paper1_results("_training_gate_flow.csv"))
+# Three further descriptives that were typed into the Method until the extraction
+# scripts were extended to write them (00_extract_participants.R,
+# 00c_extract_erp_retention.R and 02_extract_accuracy.R). Each sentence below prints a
+# marked fallback until its artefact exists, so a typed value can never outlive the data.
+other_lang_tbl <- .read_csv_if(paper1_results("_participants_other_languages.csv"))
+mis_share_tbl  <- .read_csv_if(paper1_results("_misfiltered_share.csv"))
+sent_inv_tbl   <- .read_csv_if(paper1_results("_accuracy_sentence_inventory.csv"))
 
-# Participant-flow count for a stage; `col` picks total or a per-language column.
-flow_n <- function(stage, col = "n_total") {
-  if (is.null(flow_tbl)) return("NN")
-  r <- flow_tbl[flow_tbl$stage == stage, , drop = FALSE]
-  if (nrow(r) != 1 || is.na(r[[col]])) return("NN")
-  as.character(r[[col]])
+# Languages reported beyond Norwegian and English: how many participants, and the two
+# most often named.
+other_lang_sentence <- function() {
+  n <- pstat("n_other_language", "value", 0)
+  if (identical(n, "NN") || is.null(other_lang_tbl) || !nrow(other_lang_tbl)) {
+    return(paste0("Some participants also reported knowledge of a further language, most ",
+                  "often German or Spanish, which the design did not screen out (see ",
+                  "Limitations). *[count pending the participant extraction]*"))
+  }
+  top <- utils::head(other_lang_tbl$language, 2)
+  paste0(n, " of the ", pstat("n_lhq3", "value", 0), " also reported knowledge of at least ",
+         "one further language, most often ", paste(top, collapse = " or "), ". Several of ",
+         "the languages named mark grammatical gender or case, and the design did not ",
+         "screen them out (see Limitations).")
 }
-# Demographic metric from _participants.csv (value / sd / n / vmin / vmax).
-pstat <- function(metric, col = "value", digits = 1) {
-  if (is.null(parts_tbl)) return("NN")
-  r <- parts_tbl[parts_tbl$metric == metric, , drop = FALSE]
-  if (nrow(r) != 1 || is.na(r[[col]])) return("NN")
-  v <- r[[col]]
-  if (is.numeric(v) && !isTRUE(all.equal(v, round(v)))) apa_num(v, digits = digits) else as.character(v)
+
+# Share of the retained Session 3 trials held by the four mis-filtered datasets, per
+# property recorded at that session.
+misfilter_share_sentence <- function() {
+  if (is.null(mis_share_tbl) || !nrow(mis_share_tbl)) {
+    return(paste0("The excluded data amount to roughly 6% of the Session 3 observations in ",
+                  "both the gender-agreement and the differential-object-marking analyses ",
+                  "*[share pending the retention extraction]*."))
+  }
+  lab <- LES_PROPERTY_LABELS_PROSE
+  m <- mis_share_tbl[order(match(mis_share_tbl$grammatical_property, names(lab))), ]
+  parts <- sprintf("%s%% for %s", apa_num(m$share_pct, digits = 1),
+                   unname(lab[m$grammatical_property]))
+  paste0("The excluded datasets hold ", paste(parts, collapse = " and "),
+         " of the retained Session ", paste(unique(m$session), collapse = " and "),
+         " trials.")
 }
+
+# Distinct sentences against judgement trials in the session with most trials, and the
+# mean number of presentations per distinct sentence, which is what bears on whether an
+# item term is worth carrying.
+sentence_inventory_clause <- function() {
+  if (is.null(sent_inv_tbl) || all(is.na(sent_inv_tbl$n_distinct_sentences))) {
+    return(paste0("The judgement sentences are generated combinatorially, so that each ",
+                  "distinct sentence is presented to only a few participants ",
+                  "*[inventory pending the accuracy extraction]*."))
+  }
+  s <- sent_inv_tbl[!is.na(sent_inv_tbl$n_distinct_sentences), ]
+  s <- s[which.max(s$n_trials), ]
+  sprintf(paste0("The judgement sentences are generated combinatorially. In Session %d, the ",
+                 "%s judgement trials of %s participants presented %s distinct sentences, ",
+                 "each on average %s times across the sample."),
+          as.integer(s$session), formatC(s$n_trials, format = "d", big.mark = ","),
+          s$n_participants, formatC(s$n_distinct_sentences, format = "d", big.mark = ","),
+          apa_num(s$n_trials / s$n_distinct_sentences, digits = 1))
+}
+
 # The sample is described as bilinguals rather than adults because the youngest
 # participant was under 18 at the time of the questionnaire. That is a fact about the
 # participants, not a rounding artefact: exactly one LHQ3 record gives an age below 18
 # (the next lowest is 18), and that person contributes trials to the fitted models. The
-# sentence is emitted from the data rather than typed, so it disappears by itself if the
-# minimum ever rises to 18 or above, and it carries a visible marker until the ethics
-# statement covering a minor has been written.
+# sentence is emitted from the data, so it disappears by itself if the minimum ever rises
+# to 18 or above. The guardian-consent clause in the Participants paragraph is
+# conditioned on the same test and injects the same minimum.
 minors_note <- function() {
   if (is.null(parts_tbl)) return("")
   r <- parts_tbl[parts_tbl$metric == "age_years", , drop = FALSE]
   if (nrow(r) != 1 || is.na(r$vmin) || r$vmin >= 18) return("")
-  paste0(" The youngest participant was under 18 at the time of the questionnaire;",
-         " all others were adults.",
-         " *[ethics statement for the participation of a minor: to be completed]*")
+  paste0(" The youngest participant was under 18 at the time of the questionnaire.",
+         " All others were adults.")
 }
 # Canonical pooled ERP retention (mean / SD trials retained per modelled cell).
 erp_ret <- function(field = "mean") {
@@ -352,11 +447,6 @@ erp_ret <- function(field = "mean") {
   d <- erp_ret_tbl[erp_ret_tbl$scope %in% "per_condition_canonical", , drop = FALSE]
   if (!nrow(d)) NULL else d
 }
-ret_pct <- function() {
-  d <- .ret_pc()
-  if (is.null(d) || !"pct_discarded" %in% names(d)) return("NN")
-  apa_num(mean(d$pct_discarded, na.rm = TRUE), digits = 1)
-}
 ret_by_gram <- function(level) {
   d <- .ret_pc()
   if (is.null(d) || !"grammaticality" %in% names(d)) return("NN")
@@ -374,18 +464,21 @@ ret_gram_gap <- function() {
 # The timecourse CSVs carry the cluster-permutation p AND the post-hoc
 # within-property Benjamini-Hochberg FDR columns (cluster_p_fdr / significant_fdr);
 # the generalisation CSVs hold descriptive cross-language AUC (no permutation null).
-# Display labels for plots. Two conventions are deliberate.
+# Display labels for plots, from the data manifest (_shared/R/03_data_manifest.R), which
+# is the single source of the property order for both manuscripts. Two conventions are
+# deliberate.
 # (1) ORDER. The properties are listed in the order they were introduced across
 #     sessions -- gender agreement (Session 2), differential object marking
-#     (Session 3), verb-object number agreement (Session 4) -- and this vector is the
-#     single source of that order for every figure, table and list in the manuscript.
-#     Alphabetical ordering would scramble the design and is never used.
+#     (Session 3), verb-object number agreement (Session 4) -- and every figure, table
+#     and list in the manuscript follows that order. Alphabetical ordering would
+#     scramble the design and is never used.
 # (2) LITERAL CHARACTERS. These strings are rendered by the graphics device, not by
 #     Pandoc, so a LaTeX-style "--" would appear verbatim in the figure. Body-text
-#     prose uses the en-dash form separately.
-.decode_props <- c(gender_agreement = "Gender agreement",
-                   differential_object_marking = "Differential object marking",
-                   verb_object_number_agreement = "Verb-object number agreement")
+#     prose uses the en-dash form (LES_PROPERTY_LABELS_PROSE) separately.
+.decode_props <- LES_PROPERTY_LABELS
+# The same labels for tables, which Pandoc typesets, so the en dash the running text
+# uses can be written as "--".
+.table_props <- LES_PROPERTY_LABELS_TABLE
 decode_tc  <- setNames(lapply(names(.decode_props), function(p)
   .read_csv_if(paper1_results(paste0(p, "_decoding_timecourse.csv")))), names(.decode_props))
 decode_gen <- setNames(lapply(names(.decode_props), function(p)
@@ -445,8 +538,8 @@ n_perm_txt <- function() {
 }
 # WHICH properties lag, named for prose. Without this the disclosure reads as though every
 # property's breakdowns were affected, when a rerun can leave one property behind and not
-# the others. Prose forms are spelled out here because .decode_props carries the literal
-# hyphen the graphics device needs, not the en-dash body text uses.
+# the others. The prose form is used because .decode_props carries the literal hyphen
+# the graphics device needs, not the en-dash body text uses.
 .n_perm_expl_props <- function() {
   b <- .n_perm_conf()
   if (length(b) != 1L || is.na(b)) return("")
@@ -458,11 +551,7 @@ n_perm_txt <- function() {
     any(d$n_perm[sel] < b, na.rm = TRUE)
   }, logical(1))
   if (!any(lags)) return("")
-  nm <- c(gender_agreement             = "gender agreement",
-          differential_object_marking  = "differential object marking",
-          verb_object_number_agreement = "verb--object number agreement")[
-            names(.decode_props)[lags]]
-  nm <- unname(nm)
+  nm <- unname(LES_PROPERTY_LABELS_PROSE[names(.decode_props)[lags]])
   if (length(nm) == 1L) return(nm)
   paste(paste(nm[-length(nm)], collapse = ", "), "and", nm[length(nm)])
 }
@@ -552,7 +641,7 @@ decode_status_transparency <- function() {
   if (!decode_provisional()) {
     if (!decode_expl_pending()) return("")
     return(paste0(
-      " One analysis is not yet uniform, and we flag it here rather than only where it is ",
+      " One analysis is not yet uniform, and we flag it here as well as where it is",
       "reported. The confirmatory decoding time-courses are final: they are corrected under ",
       "the family the Method describes and rest on the full permutation null. The ",
       "session-resolved breakdowns for ", .n_perm_expl_props(), " are still those of an ",
@@ -561,7 +650,7 @@ decode_status_transparency <- function() {
       "confirmatory decision, in either direction."))
   }
   paste0(
-    " One analysis is not yet final, and we flag it here rather than only where it is ",
+    " One analysis is not yet final, and we flag it here as well as where it is",
     "reported. The decoding cluster-level inference rests on artefacts whose ",
     "false-discovery-rate correction spanned a wider family than the Method describes, ",
     "and a rerun under the described family, with a larger permutation null, is in ",
@@ -673,7 +762,17 @@ dec_count <- function(s, field, noun) {
     # let the caller print its pending marker.
     return(rep(identical(LES_P1_PRIMARY, "base"), nrow(tbl)))
   }
-  !grepl("^erp_", tbl$model) | tbl$structure %in% LES_P1_PRIMARY
+  # The mis-filter-retained and diversity-covariate refits are sensitivity analyses on
+  # other data, so their shifts never enter the reported largest shift.
+  (!grepl("^erp_", tbl$model) | tbl$structure %in% LES_P1_PRIMARY) &
+    !grepl("_keepmisfiltered|_diversity", tbl$model)
+}
+
+# The retention-free refits have no weak-prior counterpart unless one has been pooled;
+# the qualification retires itself once _prior_sensitivity.csv carries a retfree row.
+retfree_weak_note <- function(tbl = sens_tbl) {
+  if (!is.null(tbl) && any(grepl("_retfree", tbl$model))) return("")
+  " The retention-free refits were fitted under the informative priors only."
 }
 
 prior_shift_max <- function(pattern = "grammaticality", family = "^erp_", tbl = sens_tbl) {
@@ -709,8 +808,7 @@ prior_width_dev <- function(pattern = "grammaticality", family = "^erp_", tbl = 
     gsub("z_recoded_caudality", "Caudality", x = _) |>
     gsub("z_baseline_predictor", "Baseline", x = _) |>
     gsub("z_multilingual_language_diversity", "L1 dominance", x = _) |>
-    gsub(":", " x ", x = _) |>
-    gsub("Intercept", "Intercept", x = _)
+    gsub(":", " x ", x = _)
 }
 
 # --- Decimal precision that keeps a credible interval visibly clear of zero ---
@@ -721,13 +819,16 @@ prior_width_dev <- function(pattern = "grammaticality", family = "^erp_", tbl = 
 # decimals as it takes for the bound nearest zero to show a non-zero digit, capped at
 # four. Larger effects are unaffected and still print at two decimals, so precision
 # tracks the magnitude being reported rather than being uniform and uninformative.
-.les_digits <- function(med, lo, hi, min_d = 2L, max_d = 4L) {
+.les_digits <- function(med, lo, hi,
+                        min_d = if (max(abs(c(med, lo, hi)), na.rm = TRUE) < 0.1) 3L else 2L,
+                        max_d = 4L) {
   # The rule is simply that no non-zero quantity may print as zero. That matters most
   # for a credible interval, where a "0.00" bound contradicts the credibility claimed
   # for it in the text, but it applies equally to a median, which would otherwise
-  # appear as the signed zero "-0.00". Two decimals is the floor and four the ceiling,
-  # so effects large enough to be read at two decimals are unaffected and precision
-  # widens only where the alternative is a misleading or malformed number.
+  # appear as the signed zero "-0.00". The floor is two decimals on the log-odds scale
+  # of the accuracy models and three on the within-participant SD scale of the ERP
+  # models, whose quantities are an order of magnitude smaller, so a median never prints
+  # equal to its own bound; four decimals is the ceiling.
   v <- abs(c(med, lo, hi))
   v <- v[is.finite(v) & v > 0]
   if (!length(v)) return(min_d)
@@ -736,11 +837,18 @@ prior_width_dev <- function(pattern = "grammaticality", family = "^erp_", tbl = 
   d
 }
 
-# Vectorised row-wise formatter for tables, using the same rule as the inline
-# reporters so a contrast reads identically whether met in the text or in a table.
-.fmt_est <- function(med, lo, hi) {
-  d  <- mapply(.les_digits, med, lo, hi)
-  ff <- function(x, k) formatC(x, format = "f", digits = k)
+# Vectorised formatter for tables. Precision is the .les_digits rule applied to the
+# whole table (or to each level of `group`, for a table that mixes model families on
+# different scales), so that decimals are uniform down a column and a rounded bound
+# can be told from a median. Negatives are set with a minus sign, which LaTeX does not
+# treat as a break point, so a value is never split as "-" / "0.002".
+.fmt_est <- function(med, lo, hi, group = rep(TRUE, length(med))) {
+  d <- integer(length(med))
+  for (g in unique(group)) {
+    k <- which(group == g)
+    d[k] <- max(mapply(.les_digits, med[k], lo[k], hi[k]))
+  }
+  ff <- function(x, k) sub("^-", "-", formatC(x, format = "f", digits = k))
   list(median = mapply(ff, med, d),
        ci     = mapply(function(l, h, k) sprintf("[%s, %s]", ff(l, k), ff(h, k)), lo, hi, d))
 }
@@ -851,18 +959,25 @@ cred_cells <- function(term, property = "",
   pkey   <- ifelse(is_erp, sub("_[0-9]+_[0-9]+_(lateral|midline)$", "", id),
                    sub("^accuracy_", "", d$model))
   cmap   <- c(overall = "Overall",
-              `within_Mini-Norwegian` = "Within Mini-Norwegian",
-              `within_Mini-English` = "Within Mini-English",
-              language_difference = "Language difference")
+              `within_Mini-Norwegian` = "Mini Norwegian",
+              `within_Mini-English` = "Mini English",
+              language_difference = "Between languages")
   cl     <- unname(cmap[d$contrast])
+  pmap   <- c(gender_agreement = "Gender",
+              differential_object_marking = "Object marking",
+              verb_object_number_agreement = "Number agreement")
+  # Keep ranges and language names together, and use compact reader-facing labels so
+  # the Word/PDF tables do not split values in the middle of a row.
   out <- data.frame(
-    Property = factor(unname(.decode_props[pkey]), levels = unname(.decode_props)),
-    Window   = ifelse(is_erp,
-                      sub(".*_([0-9]+)_([0-9]+)_(lateral|midline)$", "\\1--\\2 ms", id), "---"),
+    Property = factor(unname(pmap[pkey]), levels = unname(pmap)),
+    `Window (ms)` = ifelse(is_erp,
+                           sub(".*_([0-9]+)_([0-9]+)_(lateral|midline)$", "\\1 to \\2", id), "n/a"),
     Region   = ifelse(is_erp,
                       unname(c(lateral = "Lateral", midline = "Midline")[
-                        sub(".*_(lateral|midline)$", "\\1", id)]), "---"),
-    Measure  = ifelse(is_erp, "ERP amplitude (SD)", "Accuracy (log-odds)"),
+                        sub(".*_(lateral|midline)$", "\\1", id)]), "n/a"),
+    # The note gives the ERP unit; keeping the cell to the short label "ERP" prevents
+    # the renderer from putting "(SD)" on a separate line in the narrow measure column.
+    Measure  = ifelse(is_erp, "ERP", "Accuracy"),
     Contrast = factor(ifelse(is.na(cl), d$contrast, cl), levels = unname(cmap)),
     stringsAsFactors = FALSE, check.names = FALSE)
   out
@@ -943,7 +1058,7 @@ retfree_val <- function(cell_id, which = "overall") {
   want_item <- identical(LES_P1_PRIMARY, "maximal")
   m <- retention_tbl
   k <- startsWith(m$model, paste0("erp_", property, "_")) &
-       grepl("_retfree", m$model) & !grepl("_weakprior", m$model) &
+       grepl("_retfree", m$model) & !grepl("_weakprior|_keepmisfiltered", m$model) &
        (grepl("_itemslope", m$model) == want_item) & m$contrast == contrast
   r <- m[k, , drop = FALSE]
   if (!nrow(r)) NULL else r
@@ -983,8 +1098,8 @@ retfree_contrast <- function(cell_id, which = "overall") {
   want_item <- identical(LES_P1_PRIMARY, "maximal")
   m <- retention_tbl
   k <- startsWith(m$model, cell_id) & grepl("_retfree", m$model) &
-       !grepl("_weakprior", m$model) & (grepl("_itemslope", m$model) == want_item) &
-       m$contrast == which
+       !grepl("_weakprior|_keepmisfiltered", m$model) &
+       (grepl("_itemslope", m$model) == want_item) & m$contrast == which
   r <- m[k, , drop = FALSE]
   if (nrow(r) != 1) return(NULL)
   d <- .les_digits(r$median, r$ci_low, r$ci_high)
@@ -1012,16 +1127,25 @@ retfree_sentence <- function(cell_id = "erp_gender_agreement_400_900_midline") {
 }
 
 # --- RSVP timing census -------------------------------------------------------
-# data_derived/rsvp_timing_overlap.rds (scripts/01b_extract_rsvp_timing.R) holds
-# the census of ALL presented critical-word trials in the raw presentation logs,
-# taken before any EEG-side exclusion: trial count, the distribution of the next
-# word onset after the critical word, and the per-trial count of onsets within
-# 900 ms. Injected so the Procedure's timing claims track the logs rather than a
-# hand-typed number (the typed median had already drifted by 1 ms from the
-# full-census value).
+# scripts/01b_extract_rsvp_timing.R takes a census of ALL presented critical-word
+# trials in the raw presentation logs, before any EEG-side exclusion: trial count, the
+# distribution of the next word onset after the critical word, and the per-trial count
+# of onsets within 900 ms. It writes the scalar fields (n_trials, next_onset_min_ms,
+# next_onset_max_ms, next_onset_median_ms, max_onsets_within_900ms) and the per-session
+# counts (n_trials_s<session>) as one row of the tracked results/_rsvp_timing.csv, and
+# the full census to data_derived/rsvp_timing_overlap.rds, which is not tracked. The
+# CSV is read first, as a list so that rsvp_tim() indexes it by field, and the rds is
+# the fallback for a checkout that predates the CSV. Injected so the Procedure's timing
+# claims track the logs rather than a hand-typed number (the typed median had already
+# drifted by 1 ms from the full-census value).
 .rsvp_tim <- local({
-  p <- here::here("paper_1_transfer", "data_derived", "rsvp_timing_overlap.rds")
-  if (file.exists(p)) readRDS(p) else NULL
+  csv <- paper1_results("_rsvp_timing.csv")
+  if (file.exists(csv)) {
+    as.list(utils::read.csv(csv, stringsAsFactors = FALSE)[1, , drop = FALSE])
+  } else {
+    p <- paper1_derived("rsvp_timing_overlap.rds")
+    if (file.exists(p)) readRDS(p) else NULL
+  }
 })
 rsvp_tim <- function(field, big = FALSE) {
   if (is.null(.rsvp_tim) || is.null(.rsvp_tim[[field]]) || !is.finite(.rsvp_tim[[field]]))
@@ -1040,6 +1164,30 @@ rt_screen <- function(field, digits = 0) {
   if (!is.finite(v)) return("NN")
   if (digits > 0) apa_num(v, digits = digits)
   else formatC(v, format = "d", big.mark = ",")
+}
+
+# Session 4 logfiles the accuracy extraction cannot read (results/_accuracy_input_gaps.csv,
+# a census script 02 writes without changing what it extracts). Two export formats are
+# affected, and the participants concerned contribute no Session 4 judgements.
+.gap_tbl <- .read_csv_if(paper1_results("_accuracy_input_gaps.csv"))
+acc_gap_sentence <- function() {
+  if (is.null(.gap_tbl)) {
+    return(paste0("Two features of the Session 4 logs removed further judgements before ",
+                  "that screen *[counts pending the accuracy extraction]*."))
+  }
+  n_of <- function(reason) length(unique(.gap_tbl$participant_lab_ID[.gap_tbl$reason == reason]))
+  # Counts below ten are spelled out, as APA 7 asks of counts in running text.
+  num_word <- function(n) {
+    if (n >= 1 && n <= 9) c("one", "two", "three", "four", "five", "six", "seven",
+                            "eight", "nine")[n] else format(n, big.mark = ",")
+  }
+  sprintf(paste0(
+    "Two features of the Session 4 logs removed further judgements before that screen. ",
+    "The runs of %s participants were exported in two files whose names the extraction's ",
+    "file pattern does not match, and the logs of %s participants were exported with a ",
+    "semicolon delimiter that the comma-delimited reader cannot parse. Those participants ",
+    "contribute no Session 4 judgements and enter the models through their other sessions ",
+    "only."), num_word(n_of("split_export")), num_word(n_of("semicolon_delimited")))
 }
 
 # --- Extents of the FDR-surviving clusters in a pooled decoding time-course ---
@@ -1148,12 +1296,16 @@ whether on typological grounds [the Typological Primacy Model: @rothman2011;
 predict instead that transfer is selective and incremental, with individual
 structures transferred (and, where helpful, "enhanced") one at a time as the
 learner detects structural similarity. The Linguistic Proximity Model
-[@westergaard2017; @westergaard2021], the Scalpel Model [@slabakova2017] and the
-Cumulative-Enhancement Model [@flynn2004] all take that form. Any test that
-discriminates between them requires (a) multiple, independently manipulable
-grammatical properties, (b) a source language whose relationship to each property is
-controlled, and (c) a temporal window long enough to watch transfer emerge and
-consolidate.
+[@westergaard2017; @westergaard2021; @westergaard2023], the Scalpel Model
+[@slabakova2017] and the Cumulative-Enhancement Model [@flynn2004] all take that form.
+The wholesale position has recent defenders who raise conceptual and empirical objections
+to selective transfer [@schwartzsprouse2021], and initial-stage evidence from early
+Catalan--Spanish bilinguals, whose performance on four properties was compatible with
+Catalan as the single source of their initial English grammar, has been read as support
+for it [@gonzalezalonso2021]. Any test that discriminates between them requires (a) multiple, independently
+manipulable grammatical properties, (b) a source language whose relationship to each
+property is controlled, and (c) a temporal window long enough to watch transfer emerge
+and to test whether what transferred is retained.
 
 ## Electrophysiology of morphosyntactic processing
 
@@ -1161,10 +1313,14 @@ Event-related potentials (ERPs) provide a millisecond-resolution index of how th
 brain responds to grammatical violations and are therefore well suited to
 revealing the representations that underlie transfer before they surface in overt
 behaviour. Most evidence on L3 morphosyntactic transfer has come from offline, untimed
-acceptability judgements. These index the outcome of learning and say nothing about the
-moment-to-moment processing that ERPs expose [@angelovska2023]. A single-trial ERP design
-therefore tests directly whether source-language structure modulates online comprehension.
-That imbalance is visible in the literature itself (@fig-literature). In all,
+acceptability judgements [@puigmayenco2020; @skalba2026]. These index the outcome of
+learning. They leave untouched the moment-to-moment processing that ERPs expose
+[@angelovska2023; @rothmanalemanbanon2015]. A single-trial ERP design therefore tests
+directly whether source-language structure modulates online comprehension. Online
+evidence has begun to appear. Eye-tracking in early learners of Norwegian shows
+facilitative and non-facilitative influence from each prior language on different
+properties [@skalba2026]. The imbalance is visible in the literature itself
+(@fig-literature). In all,
 `r lit_n("All L3-transfer research")` records on L3 transfer were indexed between
 `r lit_years()`. Of those, `r lit_n("Acceptability/grammaticality judgement")` used
 acceptability or grammaticality judgements and `r lit_n("Electrophysiology (ERP/EEG)")`
@@ -1208,12 +1364,13 @@ analysed here (200--500, 300--600 and 400--900 ms). Training studies show that t
 second-language violations becomes more native-like as proficiency increases
 [@morganshort2012], and again across a consolidation
 interval containing no further exposure [@morganshort2012plos], with negativities and
-P600s emerging or shifting over time. Learners also differ systematically from one
-another in whether they recruit a more negativity-dominated or a more P600-dominated
-response [@tanner2014]. Artificial-language paradigms, in
+P600s emerging or shifting over time. Native speakers [@tanner2014] and learners
+[@tanner2013] also differ systematically from one another in whether they recruit a more
+negativity-dominated or a more P600-dominated response. Artificial-language paradigms, in
 which the input is fully controlled, have been particularly valuable for isolating
 these dynamics from the confounds of natural-language exposure
-[@gonzalezalonso2020; @friederici2002pnas].
+[@gonzalezalonso2020; @friederici2002pnas]. Bilinguals learning such a language show a
+P600 to syntactic violations at a lower proficiency than monolinguals do [@grey2018].
 
 The closest antecedent to the present design is the artificial-language L3 ERP work of
 @gonzalezalonso2020. Its findings shape both our predictions and our reading of the
@@ -1237,10 +1394,23 @@ differs within the same learners. It also closes with an unrehearsed retention t
 after months without exposure, so the durability of what transferred can be measured.
 Whether the initial-exposure pattern of @gonzalezalonso2020 reappears under these
 conditions is itself an empirical question, taken up in the Discussion.
-Recent syntheses of the transfer literature draw attention to the
-methodological choices that constrain what its findings can show
-[@puigmayenco2020; @rothman2019], and longitudinal and electrophysiological evidence
-remains among its scarcest. The recurring objection to miniature languages is that a
+
+Two behavioural studies share more of the present materials. Each trained speakers on a
+miniature language with a Norwegian lexicon and a case system, a property Norwegian
+lacks. Prior knowledge of a case language eased acquisition even though the lexicon
+pointed to Norwegian, but only where that language and the miniature language marked case
+in the same overt form, on the noun [@mitrofanova2023; @castle2026]. Greek, which marks
+case on the determiner, gave no such advantage in the first study, and the second found
+the advantage subject to word-order bias and proficiency. The overt realisation of a
+property conditioned its transfer, and the present gender manipulation varies exactly
+that realisation between the two miniature languages. Recent syntheses of the transfer
+literature draw attention to the methodological choices that constrain what its findings
+can show [@puigmayenco2020; @rothman2019; @gonzalezalonso2026], and longitudinal and
+electrophysiological evidence remains among its scarcest. An ERP successor to
+@gonzalezalonso2020 trained heritage and second-language bilinguals on a Latin
+mini-grammar and found violation responses that no current model had predicted, an
+outcome its authors took as a question about the paradigm itself [@pereirasoares2022].
+The recurring objection to miniature languages is that a
 grammar acquired in hours may not engage the mechanisms of natural morphosyntax. This
 literature answers it with the finding that artificial-language learners, once
 sufficiently proficient, show qualitatively native-like violation responses
@@ -1251,7 +1421,7 @@ control over every learner's input history, which no natural-language design can
 
 We exploit a controlled artificial-language design to test predictions that separate
 wholesale from property-by-property transfer, and to characterise the time course
-of transfer from initial exposure through post-training retention.
+of transfer from the first post-training session through post-training retention.
 Norwegian--English bilinguals (first language Norwegian, second language English) acquired
 one of two miniature languages, Mini-English or Mini-Norwegian. Within each language, we
 manipulated three morphosyntactic properties that vary in their relationship to the
@@ -1264,7 +1434,7 @@ group only (see Method).
 
 Single-trial ERPs and grammaticality judgements were collected across four
 laboratory sessions (Sessions 2, 3, 4 and 6) that trace the learning trajectory
-from initial exposure to a post-consolidation retention test. The properties
+from the first post-training session to a post-consolidation retention test. The properties
 enter the design at different points (gender agreement from Session 2,
 differential object marking from Session 3 and verb--object number agreement from
 Session 4), yielding a cumulative, property-by-property exposure schedule (@fig-design).
@@ -1275,7 +1445,7 @@ Session 4), yielding a cumulative, property-by-property exposure schedule (@fig-
 #| apa-note: "Each grammatical property enters at a different session and recurs thereafter, and the four ERP/behavioural sessions are 2, 3, 4 and 6. Gender agreement therefore has four sessions of coverage, differential object marking three, and verb--object number agreement two. The session axis is ordinal, so equal spacing does not imply equal elapsed time. Sessions 2 to 4 are one week apart, whereas Session 6, the unrehearsed retention test, follows Session 4 after about four months without exposure. The intervals are therefore annotated numerically."
 #| fig-width: 6.5
 #| fig-height: 2.9
-.props <- c("Gender agreement", "Differential object marking", "Verb-object number agreement")
+.props <- unname(LES_PROPERTY_LABELS)
 .entry <- c(2, 3, 4)
 .sess  <- c(2, 3, 4, 6)
 design <- expand.grid(s = .sess, p = seq_along(.props))
@@ -1317,7 +1487,17 @@ that effect with exposure. Its modulation by language, the grammaticality $\time
 session $\times$ language term, indexes *source-language transfer*, whether learning is
 faster or stronger for the language whose prior structures align with the target
 property. A derived Session 4 $\to$ Session 6 contrast then indexes how the
-grammaticality effect changes across the consolidation interval.
+grammaticality effect changes across the consolidation interval. The language advantage
+evaluated at a property's first session, derived from the same draws, indexes whether
+that advantage was in place when the property was first probed.
+
+The transfer accounts make no prediction about the retention interval, since they
+concern the initial state and the course of acquisition. The expectation for that
+interval comes from the training literature cited above, in which a grammaticality
+response that has emerged during training holds or grows across months without exposure
+[@morganshort2012plos]. If transfer is property-specific, that profile may differ
+between the property with a first-language analogue and the two without. The retention
+contrasts therefore characterise the trajectory. They do not test between the accounts.
 
 The two families of account are separated here by which prior grammar each engages and
 by when its influence should appear. Gender agreement is the only property with a
@@ -1341,7 +1521,13 @@ property-by-property account predicts the same confinement of the advantage to g
 agreement but a different onset, with the advantage emerging only as the learner detects
 the structural match. Under the source selection
 this design supports, then, the two families agree on where the gender-agreement
-advantage should appear and differ only on when.
+advantage should appear and differ only on when. The diagnostic quantity is therefore
+the advantage at the property's first session, which wholesale projection predicts to
+be present and a property-by-property account predicts to be absent or small. Growth of
+the advantage across sessions is predicted by the property-by-property account and
+permitted by wholesale projection, which constrains the initial state and says nothing
+about subsequent learning [@gonzalezalonso2017], so growth alone favours the former
+without excluding the latter.
 
 The L2 Status Factor makes a further prediction of its own. If the second language is the
 default source, both groups project English, which encodes none of the three properties,
@@ -1356,10 +1542,15 @@ Limitations.
 Alongside the region-averaged models, we ask whether grammaticality is decodable from the
 whole-scalp voltage pattern at each moment. A multivariate decoder can detect a
 distributed violation response too weak to move any single region's mean. Its
-cross-language generalisation offers a second, model-free view of transfer, and its
-cross-property generalisation asks whether the three structures share a domain-general
-grammaticality code or each recruits its own. No null distribution was computed for
-either generalisation analysis, so both are reported as descriptive probes.
+cross-language generalisation asks whether the pattern that separates the conditions in
+one mini-language also separates them in the other. Its cross-property generalisation
+tests a further prediction. If the grammaticality response were largely a domain-general
+salience or integration signal [@sassenhagen2019; @aurnhammer2023], a decoder trained on
+one property should transfer to the others. If each property recruits its own code, as
+the fractionation of the late positivity [@kaan2003] and the separable developmental
+courses of agreement features [@alemanbanon2018] suggest, it should not. No null
+distribution was computed for either generalisation analysis, so both are reported as
+descriptive probes.
 
 # Method
 
@@ -1369,7 +1560,7 @@ In total, `r flow_n("enrolled")` Norwegian--English bilinguals (first
 language Norwegian, second language English) took part, each assigned to learn one
 of the two miniature languages. Assignment followed a fixed rule on the participant
 identifier, giving `r flow_n("enrolled", "n_mini_english")` Mini-English and
-`r flow_n("enrolled", "n_mini_norwegian")` Mini-Norwegian learners. Language is a
+`r flow_n("enrolled", "n_mini_norwegian")` Mini-Norwegian learners, so language is a
 between-participants factor. Of the `r pstat("n_lhq3", "value", 0)` participants
 with a Language History Questionnaire record [LHQ3: @lhq3], the mean age was
 `r pstat("age_years")` years ($SD = `r pstat("age_years", "sd")`$, range
@@ -1384,23 +1575,25 @@ acquired early (age of first exposure $M = `r pstat("eng_aoa_listen")`$ years,
 $SD = `r pstat("eng_aoa_listen", "sd")`$) and used for many years
 ($M = `r pstat("eng_years")`$, $SD = `r pstat("eng_years", "sd")`$), with high
 self-rated proficiency ($M = `r pstat("eng_l2_proficiency", "value", 2)`$ of 1,
-$SD = `r pstat("eng_l2_proficiency", "sd", 2)`$). Some participants also reported
-knowledge of a grammatically gendered or case-marking language (most often German
-or Spanish), which the design did not screen out (see Limitations).
-<!-- "Some participants" is uncounted: the LHQ3 extraction does not yet emit a count of
-     participants reporting another gendered or case-marking language. Extend
-     00_extract_participants.R to write one and inject it here. -->
+$SD = `r pstat("eng_l2_proficiency", "sd", 2)`$). `r other_lang_sentence()`
 
 Attrition increased across the training: of the `r flow_n("enrolled")` who began,
 `r flow_n("attended_S3")` remained at Session 3, `r flow_n("attended_S4")` at
 Session 4, and `r flow_n("attended_S6")` completed the Session 6 retention test.
 The ERP analyses draw on the `r flow_n("usable_erp")` participants with usable
 single-trial EEG (`r flow_n("usable_erp", "n_mini_english")` Mini-English,
-`r flow_n("usable_erp", "n_mini_norwegian")` Mini-Norwegian) and the
-grammaticality-judgement analyses on `r flow_n("usable_accuracy")` participants
-(@fig-flow). The study was conducted with institutional research-ethics approval
-(reference to be added) and written informed consent from all
-participants`r if (nzchar(minors_note())) ", with guardian consent for the participant under 18 *[to be confirmed against the consent records]*" else ""`.
+`r flow_n("usable_erp", "n_mini_norwegian")` Mini-Norwegian). The fitted ERP models
+also require the L1-dominance covariate described under *Data analysis*, and the trials
+of a participant without that score are dropped by listwise deletion, so the
+gender-agreement models were fitted to `r erp_model_n("gender_agreement")`
+participants, the differential-object-marking models to
+`r erp_model_n("differential_object_marking")` and the verb--object number-agreement
+models to `r erp_model_n("verb_object_number_agreement")`. The
+grammaticality-judgement analyses draw on `r flow_n("usable_accuracy")` participants
+(@fig-flow). The project was registered with the Norwegian Agency for Shared Services in
+Education and Research (Sikt; project 2559611). All procedures complied
+with the relevant laws and institutional guidelines, the privacy rights of the participants
+were observed, and every participant gave written informed consent.
 
 ```{r}
 #| label: fig-flow
@@ -1434,7 +1627,9 @@ if (!is.null(flow_tbl)) {
 
 ## Design and materials
 
-Within each language, the design crosses grammaticality (contrast coded
+The longitudinal artificial-language paradigm implemented here is that of the wider
+project reported by @gonzalezalonso2025. Within each language, the design crosses
+grammaticality (contrast coded
 grammatical $= +0.5$, ungrammatical $= -0.5$) with session (the cumulative exposure
 schedule above) within participants, and language between participants
 (Mini-Norwegian $= +0.5$, Mini-English $= -0.5$), so a positive language-bearing
@@ -1542,37 +1737,27 @@ These four participant-sessions are excluded from every fitted ERP model and fro
 decoding.`r misfilter_status()` They are retained in two places, both flagged where they
 occur. The accuracy models draw on the behavioural record, which the filter setting does
 not touch. The descriptive grand-average waveforms, difference waves and topographies
-shown in the Results are extracted on the full sample, and their captions say so. We did
-not assess whether these participants' data look unusual, and the exclusion does not rest
-on that. It rests on the setting itself, which is a documented generator of artefacts in
-this kind of paradigm. Filtering data from a
-syntactic- and semantic-violation experiment at cutoffs of 0.3 Hz and above introduces
-spurious deflections of opposite polarity immediately before the true N400 and P600 effects
-[@tanner2015], and 1 Hz lies well inside that range. The general principle, that a
-high-pass cutoff must be matched to the analysis window because an inappropriate one
-generates artefactual slow deflections, is set out by @widmann2015. Because the exclusion
-follows from the filter's known behaviour, and nothing observed in these participants
-bore on it, it is not a results-contingent choice. The excluded data amount to roughly 6%
-of the Session 3 observations in both the gender-agreement and the differential-object-marking
-analyses. The pipeline can be re-run with them retained.^[The repository documents a
+shown in the Results are extracted on the full sample, and their captions say so. The
+exclusion rests on the filter setting itself, a documented generator of artefacts in this
+kind of paradigm [@tanner2015; @widmann2015], and on nothing observed in these
+participants' data, so the choice is not results-contingent. The argument is set out in
+@apx-analytic-decisions-in-detail. `r misfilter_share_sentence()`
+The pipeline can be re-run with them retained.^[The repository documents a
 configuration switch that refits the ERP grid with the four datasets retained, so the
 full-sample counterpart of every ERP estimate reported here is recoverable. The behavioural
 models are unaffected, the offline filter bearing only on the EEG, and the decoding
 artefacts carry no tag for the switch, so a full-sample decoding run has to be kept apart
-from the reported one.]
-<!-- The "roughly 6%" share is hand-computed from results/_exclusions.csv and the per-session
-     trial counts (checked 2026-08-19). It should be written to an artefact by the extraction
-     and injected here; until then, re-verify it whenever the exclusions or extraction change. --> Ocular artefacts were
-then corrected by independent component
-analysis,
-and the record was segmented into epochs from $-100$ to $1098$ ms relative to the
+from the reported one.] Ocular artefacts were then corrected by independent component
+analysis, and the record was segmented into epochs from $-100$ to $1098$ ms relative to the
 onset of the critical word. Trial-by-trial artefact rejection followed, retaining on
 average `r erp_ret("mean")` of the 48 presented trials per modelled cell
-($SD = `r erp_ret("sd")`$), a mean rejection rate of `r ret_pct()`%.
+($SD = `r erp_ret("sd")`$), a mean rejection rate of `r erp_ret("pct_discarded")`%.
+These retention figures are computed on the full sample, as the grand averages are, so
+the four mis-filtered Session 3 datasets contribute to the Session 3 means.
 @tbl-retention-trials gives the full per-condition breakdown. Differential trial
 loss between the compared conditions would make a grammaticality effect partly a difference
 in measurement precision and only partly one in brain response, so retention is reported per
-condition and not pooled. The two prove effectively equal.
+condition, and the two prove effectively equal.
 Averaged over properties and sessions, `r ret_by_gram("Grammatical")` trials were retained
 on grammatical trials and
 `r ret_by_gram("Ungrammatical")` on ungrammatical trials, a difference of
@@ -1601,14 +1786,14 @@ decisions and are set out under *Data analysis*.
 ```{r}
 #| label: tbl-retention-trials
 #| tbl-cap: "Retained Single-Trial EEG per Modelled Cell, by Grammatical Property and Session"
-#| apa-note: "Values are mean trials retained of the 48 presented, averaged over language. Rows are split by grammaticality because differential trial loss across the compared conditions can bias both amplitude and decodability. The two conditions are retained almost equally here (see text). A dash marks a session at which the property had not yet been introduced."
+#| apa-note: "Values are mean trials retained of the 48 presented, averaged over language. Rows are split by grammaticality because differential trial loss across the compared conditions can bias both amplitude and decodability. The two conditions are retained almost equally here (see text). An n/a entry marks a session at which the property had not yet been introduced. Like the grand averages, the table is computed on the full sample, including the four mis-filtered Session 3 datasets that the models exclude."
 if (!is.null(erp_ret_tbl) && has_knitr && "scope" %in% names(erp_ret_tbl)) {
   pc <- erp_ret_tbl[erp_ret_tbl$scope == "per_condition_canonical", , drop = FALSE]
   if (nrow(pc)) {
     # Factor (not character) so rows follow the order in which the properties were
     # introduced across sessions, rather than alphabetically.
-    pc$Property <- factor(.decode_props[match(pc$grammatical_property, names(.decode_props))],
-                          levels = unname(.decode_props))
+    pc$Property <- factor(.table_props[match(pc$grammatical_property, names(.table_props))],
+                          levels = unname(.table_props))
     # Retain grammaticality: averaging over it would remove the very comparison this
     # table exists to license, since differential trial loss between the compared
     # conditions would mean the grammaticality effect is partly a difference in
@@ -1620,11 +1805,11 @@ if (!is.null(erp_ret_tbl) && has_knitr && "scope" %in% names(erp_ret_tbl)) {
                     direction = "wide")
     names(wide) <- sub("^mean_retained\\.", "S", names(wide))
     # The NAs left by the reshape are structural: the property had not yet entered the
-    # design at that session. Printing them as "NA" reads as missing data; an em dash
-    # is the APA convention for a cell that could not exist.
+    # design at that session. Printing them as "NA" reads as missing data; an n/a entry
+    # keeps the rendered table consistent with the note for a cell that could not exist.
     num <- vapply(wide, is.numeric, logical(1))
     wide[num] <- lapply(wide[num], function(x)
-      ifelse(is.na(x), "—", formatC(x, format = "f", digits = 1)))
+      ifelse(is.na(x), "n/a", formatC(x, format = "f", digits = 1)))
     knitr::kable(wide, row.names = FALSE, align = c("l", "l", rep("r", sum(num))))
   } else cat("*Per-condition retention pending.*")
 } else {
@@ -1640,15 +1825,18 @@ the property under test, so the trial-level accuracy (correct/incorrect) and the
 single-trial ERP are two measures of one and the same event, recorded within a single
 task. Accuracy is the sole behavioural dependent measure. Response times
 served only to screen trials.
-Judgements faster than `r rt_screen("rt_min_ms")` ms or slower than
-`r rt_screen("rt_max_ms")` ms were discarded as implausible, which removed
+Judgements of `r rt_screen("rt_min_ms")` ms or less, or of `r rt_screen("rt_max_ms")`
+ms or more, were discarded as implausible, which removed
 `r rt_screen("n_rt_excluded")` of the `r rt_screen("n_valid_trials")` otherwise valid
 judgement trials (`r rt_screen("pct_rt_excluded", 1)`%), leaving
 `r rt_screen("n_kept")` trials for analysis. The bounds were carried over from the
 legacy preprocessing pipeline, which recorded no rationale for them, so we disclose
-the screen and its cost without defending the cutoffs. The judgement sentences were
-generated combinatorially, which has a consequence for the accuracy models' random-effect
-structure (see *Data analysis*).
+the screen and its cost without defending the cutoffs. `r acc_gap_sentence()` Rows
+that the presentation software logged twice under one trial number were reduced to one
+per participant, session, property and trial, and the unlabelled filler sentences shown
+at Session 2 carry no property and fall outside the modelled contrast. The judgement
+sentences were generated combinatorially, which has a consequence for the accuracy
+models' random-effect structure (see *Data analysis*).
 
 ## Data analysis
 
@@ -1658,7 +1846,12 @@ treatment is not incidental to the question here. The hypotheses concern the siz
 direction of effects that are expected to be small. Several of the comparisons that
 matter, such as whether a property's transfer effect grows across sessions, are naturally
 expressed as statements about a posterior. Priors, sampler settings, diagnostics and
-inference rules are set out in the sections that follow.
+inference rules are set out in the sections that follow. The analysis and reporting code
+was written with the assistance of Claude Code (version 2.1, Anthropic), running
+primarily the Claude Opus and Claude Fable models, which drafted and revised scripts
+under the authors' direction and checked them against the method reported here. The
+authors reviewed and ran every script, and the deposited code reproduces the analyses
+without the tool.
 
 ### Predictor coding and standardisation
 
@@ -1749,8 +1942,10 @@ than estimated for that interval on its own. Gender agreement and differential o
 marking were therefore also refitted with a binary indicator for the retention session,
 interacted with grammaticality and language and added to the linear session term. The
 linear term then carries the training trend and the indicator the deviation at Session 6.
-The refits are otherwise identical to the models above and were run under both
-random-effect structures. Verb--object number agreement admits no such refit. It is
+The indicator is coded $+0.5$ at Session 6 and $-0.5$ elsewhere and, unlike the other
+predictors, is not standardised, so its coefficient is the deviation at Session 6 on the
+response scale. The refits are otherwise identical to the models above and were run
+under both random-effect structures. Verb--object number agreement admits no such refit. It is
 sampled at the two bracketing sessions only, so an indicator for the later of them would
 be collinear with the linear term. Where the two derivations disagree, the freed estimate
 is the one that bears on consolidation, and both are reported (@tbl-retention,
@@ -1760,12 +1955,10 @@ The case for retaining the by-item grammaticality slope, and the power-based arg
 against maximal structures that it was weighed against [@barr2013; @matuschek2017], are
 set out in @apx-analytic-decisions-in-detail. The Results report the whole grid refitted without that slope, so
 a reader can see which conclusions depend on it. The accuracy models omit a by-item
-effect by design. The judgement sentences are generated combinatorially (in a
-representative session, 479 distinct sentences across 576 trials), so they do not form
-a shared item factor and a by-item term is not identifiable [@barr2013].
-<!-- The 479/576 sentence-inventory figures are hand-computed from the behavioural data
-     (re-checked 2026-08-19). They should be written to an artefact by the accuracy
-     extraction and injected; until then, re-verify them if the extraction changes. -->
+effect by design. `r sentence_inventory_clause()` Item variance is therefore thinly
+sampled per sentence, and no by-item term is carried. Its variance is absorbed into the
+residual, which leaves the accuracy estimates slightly less precise and is noted under
+*Limitations* [@barr2013].
 
 ### Priors
 
@@ -1819,13 +2012,15 @@ variation as a random effect over single trials, instead of averaging across it,
 approach @volpertesmond2021 set out for ERP data. Random-effect correlation
 matrices received an $\mathrm{LKJ}(2)$ prior [@lewandowski2009]. The literature does not
 supply a defensible microvolt effect size for these components (even systematic resampling
-finds the P600 too variable across samples to yield a transferable magnitude, @kim2024).
+finds the magnitude of the P600 to vary widely across samples, @kim2024).
 Prior means therefore encode only sign and a regularised magnitude, and their influence is
 bounded by deliberately wide standard deviations. Prior
 predictive simulation confirmed that the priors imply amplitude and accuracy distributions
-that encompass the observed data (@fig-priorpc). Every model was also refitted on the same
-data, as a sensitivity analysis, under the former weakly informative priors of
-$\mathcal{N}(0, 1)$ and $\mathcal{N}(0, 1.5)$, and the estimates were essentially unchanged. The largest
+that encompass the observed data (@fig-priorpc). Every model in the grid, under both
+random-effect structures, and every accuracy model was also refitted on the same data,
+as a sensitivity analysis, under the former weakly informative priors of
+$\mathcal{N}(0, 1)$ and $\mathcal{N}(0, 1.5)$, and the estimates were essentially
+unchanged.`r retfree_weak_note()` The largest
 shift in any grammaticality term was `r prior_shift_max()` on the within-participant
 standardised scale for the ERP models and `r prior_shift_max(family = "^accuracy_")` in
 log-odds for the accuracy models. No grammaticality term's credible interval changed
@@ -1859,8 +2054,8 @@ if (file.exists(.ppc)) {
 
 ### Sampler settings and convergence
 
-Each model was run with four chains of 10{,}000 iterations
-(2{,}000 warmup), `adapt_delta = 0.95` and `max_treedepth = 12` to accommodate the
+Each model was run with four chains of 10,000 iterations, the first 2,000 of each
+discarded as warm-up, with `adapt_delta = 0.95` and `max_treedepth = 12` to accommodate the
 challenging geometry of maximal multilevel posteriors. Convergence was assessed
 with the rank-normalised split-$\widehat{R}$ and bulk/tail effective sample sizes
 [@vehtari2021], requiring $\widehat{R} < 1.01$, bulk- and tail-ESS $> 400$, and
@@ -1915,7 +2110,7 @@ scalp too weakly to move any single cluster's mean but is nonetheless jointly
 decodable from the whole-scalp pattern [@haxby2001]. As a complementary,
 classical (non-Bayesian) analysis, we decoded Grammatical from
 Ungrammatical trials directly from the single-trial amplitude pattern across all
-EEG sensors at every time sample (baseline-corrected, downsampled to a 4~ms grid).
+EEG sensors at every time sample (baseline-corrected, downsampled to a 4 ms grid).
 The classifier was a
 regularised linear discriminant analysis under leave-one-participant-out
 cross-validation, a time-resolved multivariate pattern analysis (MVPA)
@@ -1930,7 +2125,11 @@ calibration was established with a permutation test that shuffles the
 grammaticality labels once per permutation, holding the shuffle constant across the
 whole time-course so that the null preserves each trial's temporal autocorrelation.
 Multiple comparisons across time points were corrected with cluster-based
-permutation inference [@maris2007]. A second correction layer controls the false-discovery
+permutation inference [@maris2007]. Clusters were formed from temporally contiguous
+samples whose AUC exceeded the 95th percentile of the pooled permutation null, the
+cluster statistic was the summed excess of AUC over that threshold, and each cluster
+was assessed against the distribution of the largest cluster statistic across
+permutations. A second correction layer controls the false-discovery
 rate (FDR) across clusters, with the family defined per property. Benjamini--Hochberg
 correction ($q < .05$) is applied across the clusters of a
 property's pooled overall time-course, and each property's family is corrected
@@ -1938,7 +2137,9 @@ separately. The session-resolved and session-by-language breakdowns carry only t
 cluster-level $p$ values. @apx-analytic-decisions-in-detail sets out why the family is defined this way.
 Grammatical and ungrammatical trial counts differ
 across participants and decline across sessions, so we balanced the classes by
-undersampling within each training fold. The AUC is in any case insensitive to class
+undersampling the majority class within each participant of the training fold. The
+discriminant's pooled within-class covariance was ridged by one thousandth of its mean
+diagonal for numerical stability. The AUC is in any case insensitive to class
 prevalence, so neither the classifier nor the metric can exploit a prevalence
 shortcut, and chance was set by the empirical within-participant permutation null
 [@combrisson2015]. The
@@ -1972,8 +2173,8 @@ Bayesian multilevel models, the literature-derived informative priors, the laten
 windows and macroregions, the Session 4 $\to$ 6 retention contrasts and the
 multivariate decoding analyses reported here were therefore specified after the data
 were collected. None was preregistered, so all are exploratory in the registered
-sense, and we report them as estimation-oriented analyses, not as confirmatory
-tests of preregistered hypotheses [@nosek2018; @wagenmakers2012]. Within that frame,
+sense, and we report them as estimation-oriented analyses, since none tests a
+preregistered hypothesis [@nosek2018; @wagenmakers2012]. Within that frame,
 we distinguish *primary* from *secondary* analyses. The primary analyses, fixed
 before any model was fitted, comprise the ERP grid of properties, windows,
 macroregions and priors together with the pooled, all-sessions decoding time-course
@@ -1994,7 +2195,7 @@ type was recorded per property but, as noted above, is not analysed here.
 Two decisions were made after inspecting results, and we label them as such. First, peak
 decoding accuracies are quoted on the post-stimulus axis, a restriction adopted once the
 pre-stimulus interval was found not to be at chance for differential object marking. The
-pre-stimulus interval is reported alongside as a negative control and not removed.
+pre-stimulus interval is retained and reported alongside as a negative control.
 Second, the temporal-generalisation and cross-property analyses were reclassified as
 descriptive after it became clear that no null distribution had been computed for them.
 Neither decision creates a new test, and both move the reported result in the
@@ -2062,8 +2263,8 @@ if (!is.null(conv_tbl)) {
 We assess, for each property, whether it elicited a grammaticality effect, whether that
 effect sharpened across sessions (the grammaticality $\times$ session interaction), and
 whether that development was modulated by language (the grammaticality $\times$ session
-$\times$ language interaction). The overall pattern is property-specific. Gender agreement
-showed the clearest and most broadly distributed learning effect, credible in
+$\times$ language interaction). The overall pattern is property-specific, with gender
+agreement showing the clearest and most broadly distributed learning effect, credible in
 `r cred_cells("z_recoded_grammaticality:z_recoded_session", "gender_agreement")` cells;
 verb--object number agreement a late, language-conditioned effect; and differential object
 marking a transient early grammaticality effect with a late, language-conditioned
@@ -2094,9 +2295,7 @@ key_terms <- c("z_recoded_grammaticality",
                "z_recoded_grammaticality:z_recoded_session",
                "z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language")
 if (results_ready) {
-  prop_lab <- c(gender_agreement = "Gender agreement",
-                differential_object_marking = "Differential object marking",
-                verb_object_number_agreement = "Verb-object number agreement")
+  prop_lab <- LES_PROPERTY_LABELS
   win_ord  <- c("200-500 ms", "300-600 ms", "400-900 ms")
   # Keep ONE fit per cell. post_tbl holds four variants of every cell -- the base and
   # maximal random-effect structures crossed with the informative and weak prior sets --
@@ -2145,11 +2344,14 @@ if (results_ready) {
 ```{r}
 #| label: fig-erp-waveforms
 #| fig-cap: "Grand-Average ERPs per Property at Two Representative Sites"
-#| apa-note: "Waveforms are shown at a midline posterior region (parieto-occipital, spanning the P600) and a left-anterior region (spanning the LAN/early negativity), grammatical against ungrammatical. Each line is the mean over all retained trials of all contributing participants, so participants with more retained trials contribute more to the mean. Positive voltage is plotted upward. Time zero is critical-word onset, and the pre-stimulus baseline (-100 to 0 ms) is shaded. The waveforms are not baseline-corrected (the single-trial models use each trial's own pre-stimulus baseline). The three a priori analysis windows (200--500, 300--600 and 400--900 ms) are shaded. They overlap by design, because the underlying components do, so the depth of shading reflects window overlap and does not mark out any one window. These are descriptive condition averages with no uncertainty band, and the inferential statements come from the models in the forest plot. Unlike those models, they are computed on the full sample, including the four mis-filtered Session-3 datasets described in the Method."
+#| apa-note: "Waveforms are shown at a midline posterior region (parieto-occipital, spanning the P600) and a left-anterior region (spanning the LAN/early negativity), grammatical against ungrammatical. Each line is the mean over all retained trials of all contributing participants, so participants with more retained trials contribute more to the mean. Positive voltage is plotted upward. Time zero is critical-word onset, and the pre-stimulus baseline ($-100$ to 0 ms) is shaded. The vertical axis is scaled separately for the two sites. The waveforms are not baseline-corrected (the single-trial models use each trial's own pre-stimulus baseline). The three a priori analysis windows (200--500, 300--600 and 400--900 ms) are shaded. They overlap by design, because the underlying components do, so the depth of shading reflects window overlap and does not mark out any one window. These are descriptive condition averages with no uncertainty band, and the inferential statements come from the models in the forest plot. Unlike those models, they are computed on the full sample, including the four mis-filtered Session-3 datasets described in the Method."
 #| fig-width: 6.5
 #| fig-height: 5
-ga_files <- list.files(paper1_results(), pattern = "^_grand_average_.*\\.csv$", full.names = TRUE)
-.props3 <- c("Gender agreement", "Differential object marking", "Verb-object number agreement")
+# Sorted in byte order so the row order of the pooled frame does not depend on the
+# collation of the rendering machine.
+ga_files <- sort(list.files(paper1_results(), pattern = "^_grand_average_.*\\.csv$",
+                            full.names = TRUE), method = "radix")
+.props3 <- unname(LES_PROPERTY_LABELS)
 if (length(ga_files) >= 6) {
   ga <- do.call(rbind, lapply(ga_files, utils::read.csv, stringsAsFactors = FALSE))
   reps <- c("midline posterior", "left anterior")
@@ -2169,7 +2371,8 @@ if (length(ga_files) >= 6) {
     scale_colour_manual(values = c(Grammatical = "#000000", Ungrammatical = "#D55E00")) +
     scale_linetype_manual(values = c(Grammatical = "solid", Ungrammatical = "22")) +
     scale_x_continuous(breaks = c(0, 200, 400, 600, 800, 1000)) +
-    labs(x = "Time from critical-word onset (ms)", y = "Mean amplitude (µV, positive up)",
+    labs(x = "Time from critical-word onset (ms)",
+         y = expression("Mean amplitude (" * mu * "V, positive up)"),
          colour = NULL, linetype = NULL) +
     les_theme() + theme(legend.position = "top")
 } else {
@@ -2265,11 +2468,11 @@ distribution (@fig-erp-topography).
 ```{r}
 #| label: fig-erp-topography
 #| fig-cap: "Scalp Topography of the Grammaticality Effect in the 400--900 ms Window, per Property"
-#| apa-note: "The topography is the grammatical minus ungrammatical mean amplitude, averaged over all retained trials and so weighted by each participant's retained-trial count, with no baseline correction. As with the waveforms, the average is taken over the full sample, including the four mis-filtered Session-3 datasets that the models exclude. The field is interpolated by thin-plate spline across the 30 electrodes assigned to the analysis regions (dots; nose at the top) and masked to the head, so no value is shown for scalp the montage did not sample. Sensor positions are the study's own recorded montage, read from the BrainVision headers. The outline marks the equator, and ears are drawn for orientation. The two low-temporal sites that sit below the equator (FT9/FT10) therefore fall outside the outline and are drawn as open circles. They inform the interpolation at the rim but no value is plotted beyond the equator. Warmer values indicate a larger grammatical-trial amplitude. The colour scale is symmetric about zero and shared across properties. The distribution is diffuse, not posterior-maximal, consistent with the model-based grammaticality-by-caudality interaction not being credible for any property in this window (see main text)."
+#| apa-note: "The topography is the grammatical minus ungrammatical mean amplitude, averaged over all retained trials and so weighted by each participant's retained-trial count, with no baseline correction. As with the waveforms, the average is taken over the full sample, including the four mis-filtered Session-3 datasets that the models exclude. The field is interpolated by thin-plate spline across the 30 electrodes assigned to the analysis regions (dots; nose at the top) and masked to the head, so no value is shown for scalp the montage did not sample. Sensor positions are the study's own recorded montage, read from the BrainVision headers. The outline marks the equator, and ears are drawn for orientation. The two low-temporal sites that sit below the equator (FT9/FT10) therefore fall outside the outline and are drawn as open circles. They inform the interpolation at the rim but no value is plotted beyond the equator. Warmer values indicate a larger grammatical-trial amplitude. The colour scale is symmetric about zero and shared across properties, and the grey line is the zero contour, so the sign of a region can be read without the colour. The distribution is diffuse and not posterior-maximal, consistent with the model-based grammaticality-by-caudality interaction not being credible for any property in this window (see main text)."
 #| fig-width: 6.5
-#| fig-height: 3.1
-elec_ga_files <- list.files(paper1_results(), pattern = "^_electrode_grand_average_.*\\.csv$",
-                            full.names = TRUE)
+#| fig-height: 2.1
+elec_ga_files <- sort(list.files(paper1_results(), pattern = "^_electrode_grand_average_.*\\.csv$",
+                                 full.names = TRUE), method = "radix")
 elec_xy <- .read_csv_if(paper1_results("_electrode_coordinates.csv"))
 if (length(elec_ga_files) >= 6 && !is.null(elec_xy) && requireNamespace("mgcv", quietly = TRUE)) {
   ega <- do.call(rbind, lapply(elec_ga_files, utils::read.csv, stringsAsFactors = FALSE))
@@ -2318,6 +2521,10 @@ if (length(elec_ga_files) >= 6 && !is.null(elec_xy) && requireNamespace("mgcv", 
       y = R * sin(ea) * 0.19)
     ggplot(surf, aes(x, y)) +
       geom_tile(aes(fill = diff)) +
+      # The zero contour carries the sign of the difference as a second cue, so the map
+      # survives greyscale printing, where the two ends of the diverging scale are
+      # close in luminance.
+      geom_contour(aes(z = diff), breaks = 0, colour = "grey25", linewidth = 0.3) +
       geom_path(data = head_outline, aes(x, y), colour = "grey30", linewidth = 0.4) +
       geom_path(data = nose, aes(x, y), colour = "grey30", linewidth = 0.4) +
       geom_path(data = ear_r(1),  aes(x, y), colour = "grey30", linewidth = 0.4) +
@@ -2333,8 +2540,9 @@ if (length(elec_ga_files) >= 6 && !is.null(elec_xy) && requireNamespace("mgcv", 
       scale_fill_gradient2(low = les_div[1], mid = les_div[2], high = les_div[3],
                            midpoint = 0, limits = c(-lim, lim)) +
       coord_fixed(clip = "off") +
-      labs(fill = "Grammatical −\nungrammatical (µV)") +
-      theme_void(base_size = LES_FIG_BASE_SIZE) + theme(legend.position = "right")
+      labs(fill = expression(atop("Grammatical -", "ungrammatical (" * mu * "V)"))) +
+      theme_void(base_size = LES_FIG_BASE_SIZE) +
+      theme(legend.position = "right", plot.margin = margin(0, 4, 4, 4))
   }
 } else {
   ggplot() + theme_void() + ggtitle("Scalp topography pending per-electrode extraction")
@@ -2344,42 +2552,15 @@ if (length(elec_ga_files) >= 6 && !is.null(elec_xy) && requireNamespace("mgcv", 
 ### Dependence on the by-item random-effect structure
 
 Everything above comes from the maximal structure, with crossed by-participant and
-by-item random effects each carrying a grammaticality slope. To show what that choice
-buys, we refitted the whole grid without the by-item grammaticality slope, the structure
-a design in which grammaticality varied only within participants would have justified.
-All eighteen cells met the same convergence criteria under both. The consequence differs
-sharply between the interaction terms and the main effect, so we separate them.
-
-The transfer conclusions do not depend on the choice. The interaction is credible for
-differential object marking and verb--object number agreement under both structures, and
-its intervals are essentially identical in width (`r itemslope_width_ratio()` times the
-simpler structure's width at the median). The maximal structure is in fact the more
-generous of the two here, since one further cell reaches credibility under it
-(differential object marking, 300--600 ms
-lateral)`r cred_cells_guard("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", c("erp_differential_object_marking_400_900_lateral", "erp_verb_object_number_agreement_400_900_lateral"), structure = "base")`. The count is
-`r cred_cells("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", structure = "itemslope")`
-cells against
-`r cred_cells("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", structure = "base")`
-without the slope.
-
-The grammaticality main effect is a different matter, and it is where the simpler
-structure would have misled. Posterior medians barely move between the two, but the
-maximal structure's intervals are about
-`r itemslope_width_ratio("z_recoded_grammaticality")` times as wide as the simpler
-structure's, and that widening is enough to change how many cells clear the credibility
-threshold. For gender agreement, the count is
-`r cred_cells("z_recoded_grammaticality", "gender_agreement", "itemslope")` cells under
-the maximal structure against
-`r cred_cells("z_recoded_grammaticality", "gender_agreement", "base")` without the slope,
-and, for differential object marking,
-`r cred_cells("z_recoded_grammaticality", "differential_object_marking", "itemslope")`
-against `r cred_cells("z_recoded_grammaticality", "differential_object_marking", "base")`.
-By-item variability in the grammaticality response is therefore not negligible in these
-data. Had we reported the simpler structure, we would have described the gender-agreement
-grammaticality effect as credible across nearly the whole grid. Under the structure the
-design justifies, it keeps its sign and magnitude but is credible in a minority of
-cells. The structure-dependent claim is therefore how widely the effect is distributed,
-while the existence and direction of the effect hold under both.
+by-item random effects each carrying a grammaticality slope. Refitting the whole grid
+without the by-item grammaticality slope leaves every transfer conclusion unchanged
+(`r cred_cells("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", structure = "itemslope")`
+credible cells against
+`r cred_cells("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", structure = "base")`)
+but narrows the grammaticality main effect's intervals by about
+`r itemslope_width_ratio("z_recoded_grammaticality")` times, so the breadth of that
+effect across cells is structure-dependent while its existence and direction hold under
+both. The comparison is set out in full in @apx-analytic-decisions-in-detail.
 
 ## Retention (Session 4 to Session 6)
 
@@ -2395,65 +2576,17 @@ interval. It cannot by itself separate an offline gain specific to that interval
 from continued improvement at the rate the training sessions established. Verb--object
 number agreement is the exception, being present at Sessions 4 and 6 only, so for that
 property the linear session term is precisely the change across those two sessions and the
-contrast is estimated directly from them. @tbl-retention reports the contrasts overall,
-within each language and, where derived, their between-language difference.
+contrast is estimated directly from them. @tbl-retention, in @apx-retention-tables,
+reports every contrast overall, within each language and, where derived, as the
+between-language difference; the text below reports the ones that carry the argument.
 
 For gender agreement and differential object marking, that limitation is addressed
 directly. Both properties were refitted with an indicator for the retention session,
 interacted with grammaticality and language, so that the linear term carries the training
-trend and the indicator the deviation at Session 6. @tbl-retention-free reports those
-freed contrasts. They answer a different question from @tbl-retention, and where the two
+trend and the indicator the deviation at Session 6. @tbl-retention-free, in the same
+appendix, reports those freed contrasts. They answer a different question from @tbl-retention, and where the two
 disagree, the freed estimate is the one that bears on consolidation. Verb--object number
 agreement admits no such refit, for the reason given under *Model structure*.
-
-```{r}
-#| label: tbl-retention
-#| tbl-cap: "Session 4 to Session 6 Retention Contrasts"
-#| apa-note: "Each contrast is the change in the grammaticality effect across the retention interval: posterior median, 95% credible interval and probability of direction, overall, within each language and for the between-language difference (Mini-Norwegian minus Mini-English). The two model families are on different scales, as the Measure column records. ERP contrasts are in within-participant SD units of amplitude and accuracy contrasts in log-odds, so medians should be compared only within a measure. Dashes in the window and region columns mark the accuracy models, which are fitted per property and have neither."
-if (!is.null(retention_tbl) && has_knitr) {
-  # As with the forest plot, restrict to the reported fits: the artefact carries all four
-  # variants of every cell and printing it whole put a 225-row table in the middle of the
-  # Results, in which the reported rows were indistinguishable from the sensitivity ones.
-  rtb <- retention_tbl |>
-    filter(!grepl("_weakprior", model), !grepl("_retfree", model),
-           model == vapply(sub("_itemslope$", "", model), .mid, ""))
-  .f <- .fmt_est(rtb$median, rtb$ci_low, rtb$ci_high)
-  rt <- cbind(.retention_labels(rtb),
-              data.frame(Median = .f$median, `95% CrI` = .f$ci,
-                         `p_d` = .fmt_pd(rtb$pd),
-                         check.names = FALSE, stringsAsFactors = FALSE))
-  rt <- rt[order(rt$Property, rt$Window, rt$Region, rt$Contrast), ]
-  knitr::kable(rt, row.names = FALSE)
-} else {
-  cat("*Retention contrasts will appear here once the models are fitted.*")
-}
-```
-
-```{r}
-#| label: tbl-retention-free
-#| tbl-cap: "Retention-Free Contrasts From the Refits Carrying an Explicit Retention Indicator"
-#| apa-note: "Each contrast is the deviation of the grammaticality effect at Session 6 from the trend established across the training sessions: posterior median, 95% credible interval and probability of direction, overall, within each language and for their difference (Mini-Norwegian minus Mini-English). All estimates are in within-participant SD units of amplitude. Verb--object number agreement is omitted because its indicator is not identifiable."
-if (!is.null(retention_tbl) && has_knitr) {
-  want_item <- identical(LES_P1_PRIMARY, "maximal")
-  rtf <- retention_tbl |>
-    filter(grepl("_retfree", model), !grepl("_weakprior", model),
-           grepl("_itemslope", model) == want_item)
-  if (nrow(rtf)) {
-    .f <- .fmt_est(rtf$median, rtf$ci_low, rtf$ci_high)
-    lb <- .retention_labels(rtf)
-    lb$Measure <- NULL              # a single measure here, so the column carries nothing
-    rf <- cbind(lb, data.frame(Median = .f$median, `95% CrI` = .f$ci,
-                               `p_d` = .fmt_pd(rtf$pd),
-                               check.names = FALSE, stringsAsFactors = FALSE))
-    rf <- rf[order(rf$Property, rf$Window, rf$Region, rf$Contrast), ]
-    knitr::kable(rf, row.names = FALSE)
-  } else {
-    cat("*Retention-free contrasts will appear here once the refit is pooled.*")
-  }
-} else {
-  cat("*Retention-free contrasts will appear here once the models are fitted.*")
-}
-```
 
 The retention contrasts reveal a property- and language-specific pattern. The
 gender-agreement grammaticality effect strengthened across the interval, credibly and in
@@ -2477,7 +2610,7 @@ property (gender agreement `r report_effect("accuracy_gender_agreement", "z_reco
 `r report_effect("accuracy_differential_object_marking", "z_recoded_session")`; verb--object number agreement
 `r report_effect("accuracy_verb_object_number_agreement", "z_recoded_session")`). This runs against the direction we had
 assumed in setting a positive prior on that term. What fell was the *level* of
-performance, not the ability to discriminate. The grammaticality
+performance, while the ability to discriminate held. The grammaticality
 effect, which is what indexes knowledge of the property, is credibly positive for
 differential object marking
 (`r report_effect("accuracy_differential_object_marking", "z_recoded_grammaticality")`)
@@ -2530,7 +2663,7 @@ we do not read them as such.`r decode_status_results()`
 ```{r}
 #| label: fig-decoding
 #| fig-cap: "Time-Resolved Multivariate Decoding of Grammaticality per Property"
-#| apa-note: "Lines are leave-one-participant-out AUC for the Grammatical against Ungrammatical contrast (overall analysis, all sessions pooled). The dashed line is chance (0.5). The dotted line is the cluster-forming threshold used by the permutation test (the 95th percentile of the pooled within-participant null). Horizontal orange bars mark the temporal extent of clusters in the pooled overall time-course that survive Benjamini--Hochberg FDR correction (q < .05) across that property's overall clusters (each property's family corrected separately), annotated with the cluster-level q. The bars denote cluster membership, not sample-by-sample significance. The session-resolved breakdowns are secondary and carry only their own cluster-level p values (see Transparency, preregistration and analysis status). The AUC line is a point estimate. The pipeline records no per-fold dispersion, so no uncertainty band is available and none is drawn. The pre-stimulus baseline (before critical-word onset at 0 ms) is shaded grey and serves as a negative control: above-chance decoding there indicates a confound and not a violation response. The cluster-level decisions shown are those of the confirmatory family, at the permutation count each artefact records."
+#| apa-note: "Lines are leave-one-participant-out AUC for the Grammatical against Ungrammatical contrast (overall analysis, all sessions pooled). The dashed line is chance (0.5). The dotted line is the cluster-forming threshold used by the permutation test (the 95th percentile of the pooled within-participant null). Horizontal orange bars mark the temporal extent of clusters in the pooled overall time-course that survive Benjamini--Hochberg FDR correction (q < .05) across that property's overall clusters (each property's family corrected separately), annotated with the cluster-level q, the Benjamini--Hochberg adjusted cluster-level p value. The bars denote cluster membership, not sample-by-sample significance. The session-resolved breakdowns are secondary and carry only their own cluster-level p values (see Transparency, preregistration and analysis status). The AUC line is a point estimate. The pipeline records no per-fold dispersion, so no uncertainty band is available and none is drawn. The pre-stimulus baseline (before critical-word onset at 0 ms) is shaded grey and serves as a negative control: above-chance decoding there indicates a confound and not a violation response. The cluster-level decisions shown are those of the confirmatory family, at the permutation count each artefact records."
 #| fig-width: 6.5
 #| fig-height: 5.2
 if (decode_ready) {
@@ -2563,17 +2696,20 @@ if (decode_ready) {
     geom_line(aes(y = cluster_threshold), colour = "grey60", linetype = "22", linewidth = 0.3) +
     geom_line(linewidth = 0.45, colour = "grey15") +
     facet_wrap(~ Property, ncol = 1) +
-    scale_y_continuous(expand = ggplot2::expansion(mult = c(0.12, 0.05))) +
+    scale_y_continuous(expand = ggplot2::expansion(mult = c(0.20, 0.05))) +
+    coord_cartesian(clip = "off") +
     labs(x = "Time from critical-word onset (ms)",
          y = "Decoding AUC (Grammatical vs Ungrammatical)") +
     les_theme() +
-    theme(panel.grid.minor = element_blank())
+    theme(panel.grid.minor = element_blank(), plot.margin = margin(2, 8, 12, 8))
   if (!is.null(cl) && nrow(cl)) {
     p <- p +
       geom_segment(data = cl, aes(x = x, xend = xend, y = ybar, yend = ybar),
                    inherit.aes = FALSE, colour = "#D55E00", linewidth = 1.3) +
+      # 2.9 mm is about 8.3 pt, the print floor; the dark ink meets the contrast the
+      # vermilion bars fall short of, and position keeps each label tied to its bar.
       geom_text(data = cl, aes(x = (x + xend) / 2, y = ybar, label = clab(q), vjust = .vj),
-                inherit.aes = FALSE, size = 2.6, colour = "#D55E00")
+                inherit.aes = FALSE, size = 2.9, colour = "grey15")
   }
   print(p)
 } else {
@@ -2664,8 +2800,12 @@ produce a developing violation response for
 one rule and none for another taught in the same protocol [@davidson2009]. Longitudinal
 designs show that a P600 absent at the start of instruction can be present after a
 short intensive course, with its magnitude tracking behavioural sensitivity [@white2012].
-That supports reading the present session effects as training-driven and not as an
-artefact of session order.
+That supports reading the present session effects as training-driven. Two features of
+the design nonetheless limit the reading. Session and training are confounded, so nothing
+in the design separates them, and every sentence frame recurs across sessions, so part of
+the growth of the grammaticality effect could reflect memory for particular sentences.
+The by-item session slopes absorb item-level change in amplitude but do not separate
+rule learning from sentence familiarity.
 
 One feature of the grammaticality effect must be stated before its development is
 interpreted: its polarity. With grammatical coded $+0.5$, a positive coefficient means
@@ -2673,13 +2813,14 @@ that ungrammatical critical words were the more negative-going. For gender agree
 holds in every window, including 400--900 ms. That is a sustained violation negativity
 where our informative prior anticipated a late positivity. The data overrode that prior,
 and the shift under the weak priors was negligible
-(see *Priors*). For the two control properties the effect is positive in the earlier
+(see *Priors*). For the two control properties, the effect is positive in the earlier
 windows and turns slightly negative by 400--900 ms, though that reversal is not credible
 in any cell. A violation negativity in learners at low proficiency has a natural
 reading in the developmental ERP literature, where the early stages of morphosyntactic
 learning are marked by N400-family negativities that give way to a P600 as proficiency
-grows [@osterhout2006]. That literature also finds ERP change beginning within hours of
-instruction in novices [@mclaughlin2004], and individuals varying along a
+grows [@osterhout2006]. That literature also finds lexical ERP change within about
+fourteen hours of instruction in novices [@mclaughlin2004], a morphosyntactic violation
+response within a week of brief training [@davidson2009], and individuals varying along a
 negativity-to-positivity continuum in native processing [@tanner2014] and in
 learners [@tanner2013]. On that reading, the growth of the
 effect across sessions tracks a cohort still on the negativity side of that
@@ -2694,8 +2835,8 @@ responders, and need not imply a single non-canonical generator.
 Against @gonzalezalonso2020, the closest antecedent, these data replicate the general
 profile but not its specifics. Two features carry over. Their learners produced no P600
 to gender-agreement violations at first exposure, and neither did ours at any session.
-The dominant signature here was a violation negativity throughout, under a comparable
-artificial-language paradigm. The measurement occasion was not comparable, since their ERPs
+The dominant signature for gender agreement here was a violation negativity in every
+window, under a comparable artificial-language paradigm. The measurement occasion was not comparable, since their ERPs
 come from a single first-exposure session, whereas ours begin only once a learner has passed
 the 80% post-training criterion and continue across four sessions. An early negativity to
 gender-agreement violations was likewise present in both studies. The specifics do not
@@ -2715,11 +2856,11 @@ learners. Effects that reach significance in samples of that size systematically
 overestimate their true magnitude and can even carry the wrong sign [@gelmancarlin2014].
 The significance filter also makes published effects look more replicable than they are
 [@vasishth2018], and trial-level measurement error can inflate as well as attenuate an
-observed effect, producing spuriously large estimates in small samples [@loken2017]. ERP effects
-compound the problem. Even systematic resampling finds the P600 too variable across
-samples to yield a transferable magnitude [@kim2024], so the exact topography and timing
-of a violation response are the quantities least likely to reproduce in any replication,
-ours included. On that reading, the level at which replication should be assessed is the
+observed effect, producing spuriously large estimates in small samples [@loken2017]. ERP
+effects compound the problem, since even systematic resampling finds the magnitude, onset
+and scalp distribution of the P600 to vary widely across samples [@kim2024], so the exact
+topography and timing of a violation response are the quantities least likely to
+reproduce in any replication, ours included. On that reading, the level at which replication should be assessed is the
 qualitative one. There the two studies agree: early-stage learners of a miniature
 language respond to morphosyntactic violations with attention-sensitive negativities, and
 the canonical P600 is absent until proficiency has grown. The same arguments cut against
@@ -2728,14 +2869,8 @@ cells, and the Strength of evidence section holds them to that standard.
 
 ## A signature more property-by-property than wholesale
 
-The design separates two accounts. On a *wholesale* account, one previously acquired
-grammar is projected onto the new language as a whole, so the advantage it confers is
-fixed by which grammar is selected and should stand from the property's first session
-[the Typological Primacy Model and the L2 Status Factor: @rothman2015; @bardel2007]. On
-a *property-by-property* account, transfer is selective and structure-specific, and its
-advantage accrues as the learner detects the match [the Linguistic Proximity,
-Scalpel and Cumulative-Enhancement models: @westergaard2021; @slabakova2017;
-@flynn2004]. The three properties behaved differently from one another: strong, broadly
+The two families were set out in the Introduction. The three properties behaved
+differently from one another: strong, broadly
 distributed learning for gender agreement; for differential object marking an early
 grammaticality effect, possibly carrying a stimulus-driven component, that did not
 consolidate; and a late, language-conditioned signal for verb--object number agreement.
@@ -2755,11 +2890,16 @@ and negative for differential object marking
 This is not the pattern we predicted. The design
 treats both properties as controls, and neither family predicts a source-language
 modulation on them (see *The present study*), yet both showed one, in opposite
-directions. That is a failure of the prediction, not a confirmation
-of it, and we have no account of it. Candidate explanations are a difference in
-difficulty or in the amount of exposure each property had received by Session 6, a
-general advantage of one training group that the covariates did not absorb, and a false
-positive among eighteen cells. They are not distinguishable in these data.
+directions. The prediction failed, and we have no account of the pair. Another ERP test
+of these models with a miniature language met a comparable outcome
+[@pereirasoares2022]. The L2 Status Factor derivation in the Introduction would favour
+the Mini-English group on every property, which fits the differential-object-marking
+modulation and contradicts the other two language effects, so it does not account for
+the pair either. A general advantage of one training group is likewise hard to
+reconcile with modulations of opposite sign on the two controls. The remaining
+candidates, a difference in difficulty or in the amount of exposure each property had
+received by Session 6 and a false positive among eighteen cells, are not distinguishable
+in these data.
 
 The claim that survives is narrower, and it turns on timing. Under the source selection
 the design supports, both families confine any advantage to gender agreement. Where they
@@ -2773,13 +2913,11 @@ from the same draws: `r first_sess_adv("accuracy_gender_agreement")`. That inter
 includes zero, so the onset test is indeterminate on its own terms. It neither establishes
 that the advantage was already in place when the property was first probed, which is the
 wholesale signature, nor rules it out, and its central tendency leans towards presence.
-The growth
-component is what an advantage accruing as the learner detects the structural match would
-produce. Wholesale projection does not predict that growth, although nor does it
-forbid learning from continuing once the source is projected, so the timing evidence
-favours the property-by-property reading without settling it.
-As noted above, heterogeneity on its own is the weaker evidence, since a sufficiently
-unconstrained selective account accommodates almost any pattern.
+As set out in the Introduction, growth is what the property-by-property account predicts
+and what wholesale projection permits, so the timing evidence favours the former without
+settling the contrast. As noted above, heterogeneity on its own is the weaker evidence,
+since a sufficiently unconstrained selective account accommodates almost any pattern
+[@schwartzsprouse2021].
 
 The language factor sharpens the point. Grammatical gender, expressed in Mini-Norwegian
 through a suffixed determiner, recapitulates a structure of the learners' first language
@@ -2787,18 +2925,17 @@ through a suffixed determiner, recapitulates a structure of the learners' first 
 realisation, an English-like free determiner for a feature English does not encode, has no
 such first-language support. Accordingly, the behavioural gender-agreement effect showed a
 credible language modulation (the grammaticality $\times$ session $\times$ language
-interaction, `r report_effect("accuracy_gender_agreement", "z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language")`), advantaging the Mini-Norwegian group.
+interaction reported in the Results), advantaging the Mini-Norwegian group.
 Differential object marking and verb--object number agreement are novel to both Norwegian
 and English, and neither showed that first-language-aligned advantage in the behavioural
 development. Their ERP modulations therefore cannot be read as first-language congruence
 effects. The differential-object-marking one runs the other way: its grammaticality
 effect held up across the retention interval for the Mini-English group and not for the
-Mini-Norwegian one (within Mini-English,
-`r report_contrast("erp_differential_object_marking_400_900_lateral", "within_Mini-English")`;
-within Mini-Norwegian, `r report_contrast("erp_differential_object_marking_400_900_lateral", "within_Mini-Norwegian")`).
-A single source grammar projected wholesale cannot explain why the one property with a
-first-language analogue is the one whose behavioural advantage follows that analogue, while
-the two properties without one diverge from each other in the opposite direction.
+Mini-Norwegian one (@tbl-retention). Both families predict that the one property with a
+first-language analogue is the one whose advantage follows it. What neither predicts is
+that the two properties without such an analogue should diverge from each other, and a
+single grammar projected wholesale offers no more purchase on that divergence than a
+property-by-property account does.
 
 The behavioural gender advantage also bears on the L2 Status Factor specifically. On the
 derivation set out in the Introduction, an L2 default predicts either no group difference
@@ -2821,9 +2958,9 @@ What happened to these effects over the months without exposure depends on how t
 retention step is modelled. Under the linear specification, the gender-agreement grammaticality effect was
 larger at Session 6 than at Session 4 in both languages and to almost the same degree
 (midline 400--900 ms, overall `r report_contrast("erp_gender_agreement_400_900_midline", "overall")`; language difference
-`r ret_lang_diff()`). That reading is an extrapolation. The contrast is the fitted linear
-trajectory evaluated over the retention step (see Results), so it reports continued growth
-at the training rate. The linear specification cannot express a change specific to the
+`r ret_lang_diff()`). That reading is an extrapolation, since the contrast is the fitted
+linear trajectory evaluated over the retention step (see Results) and so reports continued
+growth at the training rate. The linear specification cannot express a change specific to the
 interval.
 
 The refit that frees the Session-6 offset revises both halves of it.
@@ -2845,17 +2982,17 @@ The effect was maintained where the learners' first language supplies the same s
 eroded where it does not. On this evidence, the retention behaviour of gender agreement tracks
 the source grammar. We hold the conclusion at the level
 the estimates support, which is the group difference and not either group's separate
-trajectory. Verb--object number agreement, by contrast,
-gained over the interval only within the Mini-Norwegian group (within Mini-Norwegian,
-`r report_contrast("erp_verb_object_number_agreement_400_900_lateral", "within_Mini-Norwegian")`; within Mini-English,
-`r report_contrast("erp_verb_object_number_agreement_400_900_lateral", "within_Mini-English")`). The latest-introduced property, novel to both prior
-languages, strengthened for one training group and not the other. That is a group
-difference on a property where property-level congruence predicts none, so it belongs with
-the unexplained control modulations discussed above and not with the gender-agreement
+trajectory, a distinction that comparisons of separately tested effects routinely blur
+[@gelmanstern2006; @nieuwenhuis2011]. Verb--object number agreement, by contrast,
+gained over the interval only within the Mini-Norwegian group (@tbl-retention). The
+latest-introduced property, novel to both prior
+languages, strengthened for one training group only. That is a group difference on a
+property where property-level congruence predicts none, so we group it with the
+unexplained control modulations discussed above, separately from the gender-agreement
 transfer effect. The candidate explanations listed there apply here too, and we do not
-choose between them. Differential object marking, whose behavioural accuracy declined across the interval in both
-groups (overall `r report_contrast("accuracy_differential_object_marking", "overall")`), diverges
-by language in the freed model as gender agreement does, but in the opposite direction. Its
+choose between them. Differential object marking, whose behavioural accuracy declined
+across the interval in both groups (@tbl-retention), diverges by language in the freed
+model as gender agreement does, but in the opposite direction. Its
 retention estimate is negative within Mini-Norwegian in
 `r retfree_tally("differential_object_marking", "within_Mini-Norwegian", "negative")` cells, and the
 language difference is credible in
@@ -2873,7 +3010,7 @@ across an interval containing no further training cannot be a practice effect. T
 complementary-systems account supplies the mechanism for language specifically: rapid
 hippocampally supported familiarisation followed by slow neocortical consolidation, with
 cortical responses becoming knowledge-like only where a consolidation opportunity
-intervenes [@davis2009]. The closest precedent is direct. Adults trained on an artificial
+intervenes [@davis2009]. In the closest precedent, adults trained on an artificial
 language showed ERP responses that grew more native-like after months without exposure
 while behaviour was unchanged [@morganshort2012plos], and responses to newly learned
 words shift measurably across a single overnight interval [@bakker2015]. The
@@ -2900,8 +3037,8 @@ was the linear extrapolation, which reads the retention step off the training tr
 made the electrophysiological pattern look language-general.
 
 The two measures diverge more sharply for differential object marking. It elicited a
-large, credible behavioural grammaticality
-effect (`r report_effect("accuracy_differential_object_marking", "z_recoded_grammaticality")`) even as its ERP signature stayed weak, and that behavioural
+large, credible behavioural grammaticality effect (Results) even as its ERP
+grammaticality effect was credible in a single early cell, and that behavioural
 effect then eroded at retention, a dissociation suggesting explicit, strategy-based
 judgement of a structure that never became an automatic processing routine. The two
 are not redundant, even though they are recorded on the same trials. Where they part
@@ -2913,14 +3050,28 @@ was carried by the judgement and not by the electrophysiological response, which
 that at this stage first-language congruence shapes the explicit decision more than the
 automatic violation response. Where in processing transfer takes effect is a question
 the property-by-property models do not yet specify, and this pattern indicates it is
-separable from whether transfer occurs.
+separable from whether transfer occurs. An EEG study of natural-language L3 learners
+reports a different division, with first-language similarity consolidating implicit
+knowledge and second-language similarity enhancing metalinguistic judgement [@xu2024].
+Here the first-language-congruent advantage surfaced in the judgement, so the locus may
+vary with the stage of learning as well as with the source.
+
+One behavioural result stands apart from the dissociations. Overall accuracy fell across
+sessions for every property, against the improvement under mere exposure that motivated
+the prior on the session term [@mueller2009]. The design gives two reasons. Each session
+adds a property, so later judgements are made against a larger grammar, and Session 6
+follows months without exposure. That the grammaticality effect held or grew while the
+level fell indicates that the decline reflects task difficulty or a drift in response
+criterion, with the knowledge the effect indexes intact, although the design cannot
+separate these.
 
 ## What the multivariate analysis adds
 
 With the confirmatory decoding settled, the univariate and multivariate analyses order the
-three properties in broadly the same way. Gender agreement carries both a credible
-amplitude effect and reliable pattern separability. Verb--object number agreement carries
-neither, though its grammaticality effect does develop across sessions. Differential object
+three properties in broadly the same way. Gender agreement carries an amplitude effect
+credible in `r cred_cells("z_recoded_grammaticality", "gender_agreement")` cells and
+reliable pattern separability. Verb--object number agreement carries neither, though its
+grammaticality effect changes across the retention interval. Differential object
 marking carries separability that its pre-stimulus
 baseline forbids us to read as a violation response. That agreement was not guaranteed,
 because the two analyses ask different questions. Window-averaged amplitude asks whether a condition shifts the mean
@@ -2956,8 +3107,8 @@ the two, but it is not uniformly so, and comparable orderings are documented for
 mismatch negativity and the N2pc [@carrasco2024].
 
 These considerations constrain the claims available to us. A failure to decode is a failure
-to find linearly separable information under one analysis, not evidence that the brain does
-not distinguish the conditions [@peelen2023]. Classification performance, high or low, is
+to find linearly separable information under one analysis, and it leaves open whether the
+brain distinguishes the conditions [@peelen2023]. Classification performance, high or low, is
 a poor guide to representational content [@ritchie2019]. Nor would a divergence between the
 two analyses, had one arisen, support a conclusion about the dimensionality of the
 underlying code [@davis2014].
@@ -2970,7 +3121,7 @@ that the late positivity fractionates topographically and functionally [@kaan200
 agreement features follow separable developmental courses [@alemanbanon2018], that
 different violation types within the same learners are predicted by different
 individual-difference variables [@nichols2019], and that decoders of
-grammatical features generalise selectively rather than wholesale [@cho2025]. Reliable
+grammatical features generalise selectively [@cho2025]. Reliable
 cross-context transfer of linear EEG decoders is achievable [@zhao2025], which weighs
 against reading the present null as simple insensitivity. Even so, failed
 cross-classification is confounded with feature selection, since the sensors and
@@ -2978,16 +3129,19 @@ latencies that best separate grammatical from ungrammatical trials within a prop
 not be those carrying a property-general signal [@kaplan2015]. We therefore read the
 result as consistent with construction-specific coding, without taking it to refute any
 shared component. A Bayes-factor treatment of the decoding time-course would
-allow such nulls to be quantified and not merely reported [@keysers2020;
+allow such nulls to be quantified as well as reported [@keysers2020;
 @teichmann2022].
 
 ## Strength of evidence
 
 The conclusions below should be read on the graded scale set out under *Inference*
-[@makowski2019; @kruschke2018]. The gender-agreement learning effect and the
-between-language difference in how that effect changed across the retention interval are
-credible by any reasonable threshold. The average retention change is not, once the
-Session-6 step is freed from the training trend. The learning effect in particular is
+[@makowski2019; @kruschke2018]. The gender-agreement learning effect is credible in every
+cell but one under both random-effect structures. The between-language difference in how
+that effect changed across the retention interval is credible in
+`r retfree_tally("gender_agreement", "language_difference", "credible")` cells, with
+lower interval bounds close to zero in some of them (@tbl-retention-free), so it is
+credible on the stated criterion without being a large effect. The average departure
+from the training trend at Session 6 is not. The learning effect in particular is
 the most structure-independent result in the paper. The grammaticality $\times$ session
 interaction is credible in
 `r cred_cells("z_recoded_grammaticality:z_recoded_session", "gender_agreement")` cells under
@@ -3002,8 +3156,8 @@ the move to the maximal structure. It is nonetheless small, and it sits close en
 threshold that data-handling decisions taken before any model was fitted could bear on it.
 One such decision applies here: four Session-3 datasets were mis-filtered at acquisition
 and are excluded from every fit reported, an exclusion justified a priori and applied to
-the whole grid. No full-sample refit is reported, so we cannot say what the effect would
-have been with those datasets retained.
+the whole grid. Because no full-sample refit was run, the effect of retaining those datasets
+is not estimated.
 
 The decoding evidence grades separately, and unevenly across the three properties. Gender
 agreement's `r dec_count(dec_gender, "n_overall_fdr", "cluster")` surviving the
@@ -3014,8 +3168,6 @@ before the critical word and its highest AUC falls in the baseline, so they boun
 separability a violation response could contribute without establishing that it
 contributes any. The session-resolved breakdowns enter no correction family and are graded
 no higher than descriptive. The
-
-
 near-absence of a gender-agreement transfer interaction in the ERP signal is a well-estimated
 value near zero, though it remains conditional on the prior and the
 interval width. The verb--object number and differential-object-marking
@@ -3023,7 +3175,7 @@ signals therefore remain provisional, and the gender-agreement pattern is the se
 result. The property-by-property reading is the account the heterogeneity supports, short
 of a decisive refutation of wholesale transfer, which a single study cannot deliver. The transfer
 interactions that remain near zero are best understood as
-absence of evidence, not as demonstrated evidence of absence. We did not adopt an
+absence of evidence. They do not demonstrate absence. We did not adopt an
 equivalence (region-of-practical-equivalence) criterion, so a precisely estimated
 coefficient whose direction is undetermined ($p_d \approx .50$) marks a well-localised null
 estimate [@amrhein2019; @kruschke2018].
@@ -3056,7 +3208,8 @@ properties in counterbalanced order would separate the two. Second, the addition
 gendered or case-marking languages noted under *Participants* were not screened out.
 Such experience could support the gender or marking structures, and it is only partially
 absorbed by the L1-dominance covariate, which indexes the standing of the first language
-and not the breadth of the repertoire, and which moreover enters the ERP models only. The behavioural models have no such control, so the
+without capturing the breadth of the repertoire, and which moreover enters the ERP models
+only. The behavioural models have no such control, so the
 behavioural gender advantage is the estimate most exposed to it. Third, effects are
 quantified as mean amplitudes in fixed latency windows, with no peak or topographic
 decomposition. The absence of a native-speaker ERP baseline also means that the results
@@ -3068,11 +3221,26 @@ widens. How far the priors
 and the interval widths condition the transfer interactions that remain near zero is
 addressed under *Strength of evidence*.
 
+Two features of the sample bear on the retention inference, and a third on every
+between-group comparison. Of the `r flow_n("enrolled")` learners enrolled,
+`r flow_n("attended_S6")` attended the Session 6 retention test, so the Session 6
+estimates draw on the returners alone while the training trend draws on every session,
+and the models treat the missing sessions as ignorable given each participant's random
+effects. Returners may differ from those who left, and a retention estimate conditioned
+on returning need not describe the cohort that began. The 80% training gate described
+under *Transparency, preregistration and analysis status* adds a second selection, since
+it conditions which participant-sessions contribute data on performance in that session,
+and its outcomes are folded into the attendance counts. Assignment to language followed
+a fixed rule on the participant identifier, so the groups were not formed by random
+allocation, and the between-group comparisons carry the uncertainty that attends a
+non-randomised design.
+
 The behavioural judgement task also lacks a stable cross-participant item factor, so item
 variance is absorbed into the residual for accuracy (though not for the ERP models, which
 use fixed sentence frames). Cognitive individual-difference predictors (working memory,
 inhibitory control, statistical-learning ability) are excluded here by design and
-analysed in a companion paper, keeping the present focus on the linguistic transfer signal.
+analysed in a companion paper [@lesspredictors2026], keeping the present focus on the
+linguistic transfer signal.
 A natural further step for the decoding strand is
 representational similarity analysis [@kriegeskorte2008rsa], which would characterise
 what the distributed pattern represents: whether the same neural geometry that separates
@@ -3082,33 +3250,30 @@ here.
 
 ## Conclusion
 
-Tracked from first exposure to a post-consolidation retention test, three
-morphosyntactic properties followed three different trajectories, and the one advantage
-that tracked a first language was confined to the one property that had a
-first-language analogue. On these data, the unit of transfer is the property, not the
-grammar. We offer that conclusion provisionally. Only gender agreement dissociates the two
+Tracked from the first post-training session to a post-consolidation retention test,
+three morphosyntactic properties followed three different trajectories, and the one
+advantage that tracked a first language was confined to the one property that had a
+first-language analogue. On these data, transfer is better described as
+property-specific than as the projection of a whole grammar. We offer that conclusion
+provisionally. Only gender agreement dissociates the two
 accounts here, and under the design's own source selection, the wholesale alternative is
 disfavoured more by the advantage's growth over sessions than by its location.
 
 # Data and code availability
 
 Data extraction, model fitting and reporting are fully scripted as a reproducible
-research compendium [@marwick2018]. Models were fitted on Oxford's Advanced Research
+research compendium [@marwick2018]. Models were fitted on High-Performance Computing
+(HPC) clusters at Sigma2 (Norway) and the University of Oxford's Advanced Research
 Computing facility, on Linux (`r prov("platform", "*[platform pending a pipeline run]*")`)
 under R `r prov("R")` [@rcoreteam], with `brms` `r prov("brms")` [@burkner2017] driving
-CmdStan `r prov("CmdStan")` through the `cmdstanr` `r prov("cmdstanr")` backend. The cluster
-supplies that stack through environment modules, with no container. The module that provides
-R also provides GCC 14.2.0, for which the repository's cluster environment script pins
-CmdStan's optimisation level to `-O1` in `make/local`, because that compiler version raises
-an internal compiler error on Stan's `reduce_sum` templates at higher levels. The pin governs
-whether the models compile and leaves the draws they produce unchanged. Because the document is
-rendered under a different R installation from the one that fitted the models, every version
-given here comes from the provenance record the fitting run wrote, and none from the
-rendering session. Model fitting used the fixed
-seed `r prov("seed:LES_SEED", "20260607")`, set in the shared Bayesian settings, and the
-decoding permutations the seed
-`r prov("seed:LES_DECODE_SEED", "20260702")`, set in the job script that runs them. Both
-values are recorded in the provenance file the ERP fitting run writes.
+CmdStan `r prov("CmdStan")` through the `cmdstanr` `r prov("cmdstanr")` backend. The clusters
+supply that stack through environment modules, with no container. The compiler settings
+used on those clusters are recorded in the repository and do not affect the posterior draws.
+Every version given here comes from the provenance record the fitting run wrote. Model
+fitting used the fixed seed `r prov("seed:LES_SEED", "20260607")`, set in the shared
+Bayesian settings and recorded in that provenance record. The decoding permutations used
+the seed `r prov_dec("seed:LES_DECODE_SEED", "20260702")`, exported by the job script that
+runs them and recorded by that script beside the decoding artefacts.
 This manuscript reads only the script-generated summary tables,
 so every statistic in the Results is populated from them and none is transcribed by hand.
 The pooled posterior summaries, retention contrasts, convergence diagnostics, sample-flow
@@ -3116,20 +3281,70 @@ counts and decoding time-courses that populate the figures and tables are all pu
 with the repository. The decoding artefacts include the participant count behind every
 per-cell score. Figures are drawn with `ggplot2` [@wickham2016]
 using the theme and colour system of `depictr` [@depictr], whose default qualitative
-palette is the colourblind-safe Okabe--Ito set. The companion paper uses the same
-system, so the two share one visual identity. The literature counts in @fig-literature
+palette is the colourblind-safe Okabe--Ito set. The companion paper [@lesspredictors2026]
+uses the same system, so the two share one visual identity. The literature counts in
+@fig-literature
 were retrieved from the Scopus Search API with `scopusflow` [@scopusflow], which records
 the exact query beside each count, so the search is reproducible from the repository. Its
 coverage limits are stated in the figure caption. All extraction, modelling and reporting
-scripts are available in this paper's repository at
-<https://github.com/pablobernabeu/LESS-morphosyntactic-transfer>, together with the environment
+scripts are archived with the data in the project's Open Science Framework repository at
+<https://osf.io/tq7vy>, together with the environment
 specification: an `renv` lockfile pinning the R packages of the fitting library, and a
 provenance record written at fit time. That record holds the software versions in force
 when the ERP models were fitted, which is what the versions above are read from. The
-accuracy models and the decoding analyses run in the same cluster environment but under
-separate scripts, which write no provenance record of their own. The raw
-electroencephalographic recordings are too large to distribute through that repository and
-are deposited on OSF at <https://osf.io/tq7vy>.
+accuracy models and the decoding analyses run in the same cluster environment under
+separate scripts. The accuracy script records the R, brms, cmdstanr and CmdStan versions
+of each fit in the pooled fit metadata that accompanies the results, and the decoding job
+records its seed and permutation settings beside the decoding artefacts. The raw
+electroencephalographic recordings, too large to distribute through an ordinary
+version-control repository, are held in the same Open Science Framework repository as
+the code. The paper's analysis code and other open materials are also available at
+<https://github.com/pablobernabeu/LESS-morphosyntactic-transfer>.
+
+# Declaration of generative AI and AI-assisted technologies in the manuscript preparation process
+
+During the preparation of this work, the authors used Claude Code (version 2.1,
+Anthropic), running primarily the Claude Opus and Claude Fable models, in order to
+support the research, the analyses and the writing. After using this tool, the authors
+reviewed and edited the content as needed and take full responsibility for the content
+of the published article.
+
+# CRediT authorship contribution statement
+
+**Pablo Bernabeu**: Conceptualization, Methodology, Software, Formal analysis, Data
+curation, Visualization, Writing – original draft, Writing – review & editing.
+**Christina Athanasiadi**: Data curation, Project administration, Writing – review &
+editing. **Stella L. Pischinger**: Data curation, Writing – review & editing.
+**Gabriella Silva**: Conceptualization, Methodology, Investigation, Writing – review &
+editing. **My Ngoc Giang Hoang**: Data curation, Writing – review & editing.
+**Vincent DeLuca**: Conceptualization, Methodology, Supervision, Writing – review &
+editing. **Jason Rothman**: Conceptualization, Funding acquisition, Resources,
+Supervision, Writing – review & editing. **Iva Ivanova**: Conceptualization,
+Methodology, Writing – review & editing. **Claudia Poch**: Methodology, Validation,
+Writing – review & editing. **Jorge González Alonso**: Conceptualization, Methodology,
+Funding acquisition, Project administration, Supervision, Writing – review & editing.
+
+# Funding
+
+This work was supported by the Research Council of Norway (grant 326487-FORSKER21) and
+by the Comunidad de Madrid (grant 2020-T1/HUM-20037), both awarded to Jorge González Alonso.
+
+# Declaration of competing interest
+
+The authors declare that they have no known competing financial interests or personal
+relationships that could have appeared to influence the work reported in this paper.
+
+# Acknowledgements
+
+We thank Mona Kirkness Fossum for assistance with translating materials;
+Gaute Berglund, Anders Gabrielsen and Tekabe Legesse Feleke for assistance with session
+piloting; Teodóra Vékony for advice on the alternating serial reaction
+time task; Björn Lundquist for assistance with implementation in OpenSesame; and
+Antonio Fábregas, Natalia Mitrofanova, Yulia Rodina, Marit Westergaard, Merete
+Anderssen and Fatih Bayram for advice and assistance with the design and translation of
+materials and participant recruitment. Models were fitted on High-Performance Computing
+(HPC) clusters at Sigma2 (Norway) and the Advanced Research Computing facility of the
+University of Oxford.
 
 {{< pagebreak >}}
 
@@ -3159,8 +3374,62 @@ fitted in a Bayesian framework such as Stan, while explicitly leaving open wheth
 fitting overparameterised maximal models makes sense there. Ours converged, meeting the
 same criteria as every other
 model reported here. We also fit the whole grid a second time without the
-by-item grammaticality slope and report the comparison in the Results, so a reader can see
-which conclusions depend on it.
+by-item grammaticality slope, so a reader can see which conclusions depend on it. That
+comparison follows.
+
+## Sensitivity to the by-item grammaticality slope
+
+To show what the maximal structure buys, we refitted the whole grid without the by-item
+grammaticality slope, the structure a design in which grammaticality varied only within
+participants would have justified. All eighteen cells met the same convergence criteria
+under both. The consequence differs sharply between the interaction terms and the main
+effect, so we separate them.
+
+The transfer conclusions do not depend on the choice. The interaction is credible for
+differential object marking and verb--object number agreement under both structures, and
+its intervals are essentially identical in width (`r itemslope_width_ratio()` times the
+simpler structure's width at the median). The maximal structure is in fact the more
+generous of the two here, since one further cell reaches credibility under it
+(differential object marking, 300--600 ms
+lateral)`r cred_cells_guard("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", c("erp_differential_object_marking_400_900_lateral", "erp_verb_object_number_agreement_400_900_lateral"), structure = "base")`. The count is
+`r cred_cells("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", structure = "itemslope")`
+cells against
+`r cred_cells("z_recoded_grammaticality:z_recoded_session:z_recoded_mini_language", structure = "base")`
+without the slope.
+
+The grammaticality main effect is a different matter, and it is where the simpler
+structure would have misled. Posterior medians barely move between the two, but the
+maximal structure's intervals are about
+`r itemslope_width_ratio("z_recoded_grammaticality")` times as wide as the simpler
+structure's, and that widening is enough to change how many cells clear the credibility
+threshold. For gender agreement, the count is
+`r cred_cells("z_recoded_grammaticality", "gender_agreement", "itemslope")` cells under
+the maximal structure against
+`r cred_cells("z_recoded_grammaticality", "gender_agreement", "base")` without the slope,
+and, for differential object marking,
+`r cred_cells("z_recoded_grammaticality", "differential_object_marking", "itemslope")`
+against `r cred_cells("z_recoded_grammaticality", "differential_object_marking", "base")`.
+By-item variability in the grammaticality response is therefore not negligible in these
+data. Had we reported the simpler structure, we would have described the gender-agreement
+grammaticality effect as credible across nearly the whole grid. Under the structure the
+design justifies, it keeps its sign and magnitude but is credible in a minority of
+cells. The structure-dependent claim is therefore how widely the effect is distributed,
+while the existence and direction of the effect hold under both.
+
+## The Session 3 filter exclusion
+
+The Method excludes the Session 3 recordings of four participants, which were high-pass
+filtered at 1 Hz where every other recording was filtered at 0.1 Hz. We did not assess
+whether these participants' data look unusual, and the exclusion does not rest on that.
+It rests on the setting itself, which is a documented generator of artefacts in this kind
+of paradigm. Filtering data from a syntactic- and semantic-violation experiment at
+cutoffs of 0.3 Hz and above introduces spurious deflections of opposite polarity
+immediately before the true N400 and P600 effects [@tanner2015], and 1 Hz lies well
+inside that range. The general principle, that a high-pass cutoff must be matched to the
+analysis window because an inappropriate one generates artefactual slow deflections, is
+set out by @widmann2015. Because the exclusion follows from the filter's known
+behaviour, and nothing observed in these participants bore on it, it is not a
+results-contingent choice.
 
 ## The decoding correction family
 
@@ -3172,6 +3441,71 @@ positive-dependence condition that licenses Benjamini--Hochberg under dependence
 be established. A false-discovery rate computed over such a family is not interpretable.
 The three properties' pooled time-courses rest on disjoint sets of trials, and correcting
 each property's family separately keeps every family self-contained.`r decode_status_appendix()`
+
+# Retention contrasts in full {#apx-retention-tables}
+
+The Results report the retention contrasts that carry the argument. The two tables below
+give the full record: every Session 4 to Session 6 contrast of the reported ERP and accuracy
+models (@tbl-retention), and every retention-free contrast from the refits that carry an
+explicit retention indicator (@tbl-retention-free). Both are read from the pooled contrast
+artefact and reproduce with it.
+
+```{r}
+#| label: tbl-retention
+#| tbl-cap: "Session 4 to Session 6 Retention Contrasts"
+#| apa-note: "Each contrast is the change in the grammaticality effect across the retention interval: posterior median, 95% credible interval and probability of direction, overall, within each language and for the between-language difference (Mini-Norwegian minus Mini-English). The two model families are on different scales, as the Measure column records. ERP contrasts are in within-participant SD units of amplitude and accuracy contrasts in log-odds, so medians should be compared only within a measure. Dashes in the window and region columns mark the accuracy models, which are fitted per property and have neither. For compactness, Gender means subject--verb gender agreement, Object marking means differential object marking, and Number agreement means verb--object number agreement."
+#| apa-longtable: true
+#| tbl-colwidths: [18, 11, 9, 9, 18, 10, 19, 6]
+if (!is.null(retention_tbl) && has_knitr) {
+  # As with the forest plot, restrict to the reported fits: the artefact carries all four
+  # variants of every cell and printing it whole put a 225-row table in the middle of the
+  # Results, in which the reported rows were indistinguishable from the sensitivity ones.
+  rtb <- retention_tbl |>
+    filter(!grepl("_weakprior", model), !grepl("_retfree", model),
+           model == vapply(sub("_itemslope$", "", model), .mid, ""))
+  # Precision is uniform within each model family (ERP rows, accuracy rows), so a reader
+  # can compare down a column; see .fmt_est.
+  .f <- .fmt_est(rtb$median, rtb$ci_low, rtb$ci_high, group = grepl("^erp_", rtb$model))
+  rt <- cbind(.retention_labels(rtb),
+              data.frame(Median = .f$median, `95% CrI` = .f$ci,
+                         `$p_d$` = .fmt_pd(rtb$pd),
+                         check.names = FALSE, stringsAsFactors = FALSE))
+  rt <- rt[order(rt$Property, rt$`Window (ms)`, rt$Region, rt$Contrast), ]
+  knitr::asis_output("\\Needspace{12\\baselineskip}\n")
+  knitr::kable(rt, row.names = FALSE, align = c("l", "l", "l", "l", "l", "r", "r", "r"))
+} else {
+  cat("*Retention contrasts will appear here once the models are fitted.*")
+}
+```
+
+```{r}
+#| label: tbl-retention-free
+#| tbl-cap: "Retention-Free Contrasts From the Refits Carrying an Explicit Retention Indicator"
+#| apa-note: "Each contrast is the deviation of the grammaticality effect at Session 6 from the trend established across the training sessions: posterior median, 95% credible interval and probability of direction, overall, within each language and for their difference (Mini-Norwegian minus Mini-English). All estimates are in within-participant SD units of amplitude. Verb--object number agreement is omitted because its indicator is not identifiable. For compactness, Gender means subject--verb gender agreement and Object marking means differential object marking."
+#| apa-longtable: true
+#| tbl-colwidths: [18, 11, 9, 18, 10, 28, 6]
+if (!is.null(retention_tbl) && has_knitr) {
+  want_item <- identical(LES_P1_PRIMARY, "maximal")
+  rtf <- retention_tbl |>
+    filter(grepl("_retfree", model), !grepl("_weakprior", model),
+           grepl("_itemslope", model) == want_item)
+  if (nrow(rtf)) {
+    .f <- .fmt_est(rtf$median, rtf$ci_low, rtf$ci_high)
+    lb <- .retention_labels(rtf)
+    lb$Measure <- NULL              # a single measure here, so the column carries nothing
+    rf <- cbind(lb, data.frame(Median = .f$median, `95% CrI` = .f$ci,
+                               `$p_d$` = .fmt_pd(rtf$pd),
+                               check.names = FALSE, stringsAsFactors = FALSE))
+    rf <- rf[order(rf$Property, rf$`Window (ms)`, rf$Region, rf$Contrast), ]
+    knitr::asis_output("\\Needspace{12\\baselineskip}\n")
+    knitr::kable(rf, row.names = FALSE, align = c("l", "l", "l", "l", "r", "r", "r"))
+  } else {
+    cat("*Retention-free contrasts will appear here once the refit is pooled.*")
+  }
+} else {
+  cat("*Retention-free contrasts will appear here once the models are fitted.*")
+}
+```
 
 # Prior specifications {#apx-prior-specifications}
 
@@ -3218,7 +3552,7 @@ if (.priors_ok) {
     coef <- gsub("^z_recoded_", "", coef)
     # A literal multiplication sign, not "$\\times$": the backslash of a maths
     # replacement string is consumed by gsub, so the cell rendered as "$times$".
-    lab <- gsub("z_recoded_", "", gsub(":", " × ", coef))
+    lab <- gsub("z_recoded_", "", gsub(":", " x ", coef))
     # Match the sentence case of the class labels above, which are capitalised.
     paste0(toupper(substr(lab, 1, 1)), substr(lab, 2, nchar(lab)))
   }
@@ -3229,7 +3563,7 @@ if (.priors_ok) {
     for (i in seq_len(nrow(d))) {
       .rows[[length(.rows) + 1L]] <- data.frame(
         model = "ERP", coef = d$coef[i], class = d$class[i], prior = d$prior[i],
-        where = sprintf("%s ms, %s", sub("_", "-", w), gsub("_", " ", p)),
+        where = sprintf("%s ms, %s", sub("_", "--", w), gsub("_", " ", p)),
         stringsAsFactors = FALSE)
     }
   }
@@ -3282,18 +3616,24 @@ if (.priors_ok) {
 This appendix reports the realised sampling diagnostics for every fitted model. Each of
 the 18 ERP cells was fitted under two random-effect structures (base and maximal) and
 two prior sets, the literature-derived informative priors reported throughout and the
-weakly informative baseline used for the sensitivity analysis. Each of the 3
-accuracy models was fitted under the two prior sets alone, having a single random-effect
-structure because no by-item term is identifiable for it. To those, the retention-free refits add
-the 12 gender-agreement and differential-object-marking cells under both structures with
-the informative priors, giving `r if (is.null(conv_tbl)) "NN" else nrow(conv_tbl)` fits
-in all. @tbl-convergence-appendix gives the realised diagnostics for every one, so a
+weakly informative baseline used for the sensitivity analysis, giving
+`r conv_n("^erp_.*(lateral|midline)(_weakprior)?(_itemslope)?$")` grid fits. Each of the
+3 accuracy models was fitted under the two prior sets alone, having a single
+random-effect structure because no by-item term is carried, giving
+`r conv_n("^accuracy_[a-z_]+(_weakprior)?$")` fits. The retention-free refits add
+`r conv_n("_retfree$")` fits, the 12 gender-agreement and differential-object-marking
+cells under both structures with the informative
+priors.`r if (!is.null(conv_tbl) && any(grepl("_keepmisfiltered|_diversity", conv_tbl$model))) " The data-side sensitivity variants are marked in the table's own columns." else ""`
+In all, `r if (is.null(conv_tbl)) "NN" else nrow(conv_tbl)` models were fitted.
+@tbl-convergence-appendix gives the realised diagnostics for every one, so a
 model that converged comfortably can be told from one that converged marginally.
 
 ```{r}
 #| label: tbl-convergence-appendix
 #| tbl-cap: "Convergence Diagnostics for Every Fitted Model"
-#| apa-note: "Properties are abbreviated to keep the table within the measure: Gender is subject--verb gender agreement, Object marking is differential object marking, and Number agreement is verb--object number agreement. R-hat is the maximum rank-normalised R-hat and each ESS the minimum effective sample size, both taken over all parameters of the model. A blank window and region mark the grammaticality-judgement accuracy models, which are not resolved by time window or scalp region. The retention-free column marks the refits in which the Session-6 step is freed from the training trend. No model produced a divergent transition, and all met the criteria of R-hat below 1.01 with both effective sample sizes above 400."
+#| apa-note: "Properties are abbreviated to keep the table within the measure: Gender is subject--verb gender agreement, Object marking is differential object marking, and Number agreement is verb--object number agreement. $\\widehat{R}$ is the maximum rank-normalised $\\widehat{R}$ and each ESS the minimum effective sample size, both taken over all parameters of the model. A blank window and region mark the grammaticality-judgement accuracy models, which are not resolved by time window or scalp region. The retention-free column marks the refits in which the Session-6 step is freed from the training trend. No model produced a divergent transition, and all met the criteria of $\\widehat{R}$ below 1.01 with both effective sample sizes above 400."
+#| apa-longtable: true
+#| tbl-colwidths: [15, 12, 10, 12, 13, 15, 7, 8, 8]
 if (!is.null(conv_tbl) && has_knitr) {
   # Every variant lives in the model id as a suffix; split each into its own column so the
   # name column stays inside the measure and the grid is readable as a design rather than
@@ -3325,17 +3665,19 @@ if (!is.null(conv_tbl) && has_knitr) {
   .propmap <- c(
     gender_agreement             = "Gender",
     differential_object_marking  = "Object marking",
-    verb_object_number_agreement = "Number agreement")
+    verb_object_number_agreement = "Number agr.")
   .prop <- ifelse(.graded, sub(.cellpat, "", .stem), .stem)
   ct <- conv_tbl |>
     transmute(
       Property = ifelse(is.na(.propmap[.prop]), gsub("_", " ", .prop),
                         unname(.propmap[.prop])),
-      Window = ifelse(.graded,
-                      paste0(sub("_", "–", sub(paste0("^.*", .cellpat), "\\1", .stem)),
-                             " ms"),
+       `Window (ms)` = ifelse(.graded,
+                       sub("_", "--", sub(paste0("^.*", .cellpat), "\\1", .stem)),
+                       ""),
+      Region = ifelse(.graded,
+                      unname(c(lateral = "Lateral", midline = "Midline")[
+                        sub(paste0("^.*", .cellpat), "\\2", .stem)]),
                       ""),
-      Region = ifelse(.graded, sub(paste0("^.*", .cellpat), "\\2", .stem), ""),
       Structure = ifelse(grepl("_itemslope", model), "maximal", "base"),
       Priors    = if ("prior_variant" %in% names(conv_tbl)) prior_variant else NA_character_,
       `Retention-free` = ifelse(grepl("_retfree", model), "yes", "no"),
@@ -3343,19 +3685,29 @@ if (!is.null(conv_tbl) && has_knitr) {
       # the variant has not been fitted, so the table is unchanged until one exists.
       `Mis-filtered retained` = ifelse(grepl("_keepmisfiltered", model), "yes", "no"),
       `Diversity covariate` = ifelse(grepl("_diversity", model), "yes", "no"),
-      `R-hat` = round(max_rhat, 3),
+      `$\\widehat{R}$` = round(max_rhat, 3),
       `ESS (bulk)` = round(min_ess_bulk),
       `ESS (tail)` = round(min_ess_tail))
   # Drop an identifying column only when it is constant, so the table never hides a
   # distinction that is actually present.
-  if (all(ct$Window == "")) ct$Window <- NULL
+  if (all(ct$`Window (ms)` == "")) ct$`Window (ms)` <- NULL
   if (all(ct$Region == "")) ct$Region <- NULL
   if (all(is.na(ct$Structure)) || length(unique(ct$Structure)) == 1) ct$Structure <- NULL
   if (all(is.na(ct$Priors))    || length(unique(ct$Priors))    == 1) ct$Priors    <- NULL
   if (length(unique(ct$`Retention-free`)) == 1) ct$`Retention-free` <- NULL
   if (length(unique(ct$`Mis-filtered retained`)) == 1) ct$`Mis-filtered retained` <- NULL
   if (length(unique(ct$`Diversity covariate`)) == 1) ct$`Diversity covariate` <- NULL
-  knitr::kable(ct)
+  # Keep the short labels together in PDF output.  The wrappers are added only for
+  # LaTeX; DOCX receives the ordinary text and therefore never exposes TeX markup.
+  if (knitr::is_latex_output()) {
+    ct$Region <- gsub("^Midline$", "\\\\mbox{Midline}", ct$Region)
+    ct$Structure <- gsub("^maximal$", "\\\\mbox{maximal}", ct$Structure)
+    ct$Priors <- gsub("^informative$", "\\\\mbox{informative}", ct$Priors)
+    knitr::asis_output("\\Needspace{12\\baselineskip}\n")
+    knitr::kable(ct, escape = FALSE)
+  } else {
+    knitr::kable(ct)
+  }
 } else {
   cat("*Convergence diagnostics will appear here once the models are fitted.*")
 }
@@ -3373,7 +3725,7 @@ are dominated by the shared evoked response.
 ```{r}
 #| label: fig-erp-difference
 #| fig-cap: "Grand-Average Difference Waves per Property at the Two Representative Sites"
-#| apa-note: "Difference waves are grammatical minus ungrammatical mean amplitude at the same two sites as the grand-average waveforms. Values above zero indicate a more positive amplitude on grammatical trials. Time zero is critical-word onset and the pre-stimulus baseline (-100 to 0 ms) is shaded, with window shading as in the waveform figure. These are descriptive condition averages with no uncertainty band, and the inferential statements come from the models. Like the waveforms, they are trial-weighted and computed on the full sample, including the four mis-filtered Session-3 datasets."
+#| apa-note: "Difference waves are grammatical minus ungrammatical mean amplitude at the same two sites as the grand-average waveforms. Values above zero indicate a more positive amplitude on grammatical trials. Time zero is critical-word onset and the pre-stimulus baseline ($-100$ to 0 ms) is shaded, with window shading as in the waveform figure. The vertical axis is scaled separately for the two sites. These are descriptive condition averages with no uncertainty band, and the inferential statements come from the models. Like the waveforms, they are trial-weighted and computed on the full sample, including the four mis-filtered Session-3 datasets."
 #| fig-width: 6.5
 #| fig-height: 4
 if (length(ga_files) >= 6) {
@@ -3398,8 +3750,8 @@ if (length(ga_files) >= 6) {
     geom_line(linewidth = 0.5, colour = "#0072B2") +
     facet_grid(Site ~ Property, scales = "free_y") +
     scale_x_continuous(breaks = c(0, 200, 400, 600, 800, 1000)) +
-    labs(x = "Time from critical-word onset (ms)", y = "Grammatical − ungrammatical (µV, positive up)") +
+    labs(x = "Time from critical-word onset (ms)",
+         y = expression("Grammatical - ungrammatical (" * mu * "V, positive up)")) +
     les_theme()
 }
 ```
-

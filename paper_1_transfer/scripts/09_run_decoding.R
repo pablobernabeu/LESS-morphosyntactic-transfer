@@ -113,26 +113,18 @@ LES_DECODE_SEED   <- as.integer(Sys.getenv("LES_DECODE_SEED", unset = "20260702"
 # >= 1000 permutations for the chance/cluster null, so the minimum attainable cluster
 # p (1/(nperm+1)) and the tail feeding the Benjamini-Hochberg FDR are stable near
 # alpha (Maris & Oostenveld, 2007; Nichols & Holmes, 2002,
-# https://doi.org/10.1002/hbm.1058). That is the standard; what a given artefact was
-# actually produced under is carried in its own n_perm column, which the manuscript
-# reads rather than assuming a value. THE ARTEFACTS CURRENTLY IN results/ ARE NOT AT
-# THAT STANDARD: the three *_decoding_timecourse.csv are from a B = 200 run, made before
-# the confirmatory family was narrowed below, so their cluster_p_fdr spans the
-# superseded family (all of a property's analyses pooled: 114 clusters for gender
-# agreement) and the current guard would refuse that run outright, since at B = 200 the
-# p-floor 1/(B + 1) = .00498 exceeds alpha/m = .05/14 for gender agreement's 14
-# confirmatory clusters. A B = 1000 rerun is under way and has not yet replaced them
-# (paper_1_transfer/hpc/08_decoding.slurm records its progress). A reduced count is only
-# usable for the stages that do not run the confirmatory FDR (crosslang, crossprop,
-# temporalgen): run_timecourse() enforces the admissibility guard in
-# .les_fdr_confirmatory(), which stops below roughly m / alpha permutations. At 50
-# permutations that stage therefore fails outright as soon as a property yields three or
-# more confirmatory clusters, which two of the three properties do.
+# https://doi.org/10.1002/hbm.1058). That is the standard. What a given artefact was
+# produced under is carried in its own n_perm column, per row, which the manuscript
+# reads, and it can differ between the confirmatory and exploratory strata while a
+# rerun is in flight (see 09b_assemble_confirmatory_timecourse.R). A reduced count is
+# usable only for the stages that do not run the confirmatory FDR (crosslang, crossprop,
+# temporalgen); run_timecourse() enforces the admissibility guard in
+# .les_fdr_confirmatory(), which stops below roughly m / alpha permutations.
 LES_DECODE_NPERM  <- as.integer(Sys.getenv("LES_DECODE_NPERM", unset = "1000"))
 # Permutations between within-block checkpoints. Block-level checkpointing alone is
 # not enough on this cluster: the pooled "overall" block is ~44% of a property's run
-# (4+ days at B = 1000), and a NODE_FAIL partway through it discards everything, which
-# is exactly what cost job 12664261_0 3 d 23 h on 2026-08-21. Saving the partially
+# (4+ days at B = 1000), and a NODE_FAIL partway through it discards everything: one
+# such failure cost a run 3 d 23 h of permutations. Saving the partially
 # filled null every LES_DECODE_CKPT_EVERY permutations caps the loss at that many
 # permutations instead of a whole block. The cost is one rds write per 50 permutations,
 # negligible beside the permutation itself.
@@ -597,9 +589,9 @@ LES_DECODE_CONFIRMATORY <- "overall"
 # --- (0) overall + (a) session-resolved / language-resolved time-courses ----------
 # --- Per-block checkpointing -------------------------------------------------
 # A time-course block costs hours and the whole stage used to write nothing until every
-# block had finished, so an interruption threw away the lot. On 2026-08-13 job 12664261_0
-# was requeued when its node was drained for a datacentre thermal event, losing 11 days and
-# 22 hours with 11 of 13 blocks complete and nothing on disk.
+# block had finished, so an interruption threw away the lot: one node drain partway
+# through a run discarded 11 days and 22 hours of work, with 11 of 13 blocks complete and
+# nothing on disk.
 #
 # WHY THE RNG STATE IS CACHED TOO, AND NOT JUST THE RESULT
 # set.seed(LES_DECODE_SEED) is called once when this file loads, and every block draws from

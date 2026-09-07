@@ -42,12 +42,12 @@ suppressPackageStartupMessages({
 })
 
 grand_average_electrode_one <- function(property, macroregion) {
-  source(data_path("R_functions", "merge_trialbytrial_EEG_data.R"))   # lazy: heavy loader
+  source(legacy_eeg_loader())   # lazy: heavy loader
   message("[ga-elec] loading ", property, " / ", macroregion, " ...")
   raw <- merge_trialbytrial_EEG_data(
     EEG_file_pattern      = les_p1_file_pattern(property),
-    min_time              = -100,   # full epoch for a continuous waveform
-    max_time              = 1098,
+    min_time              = LES_P1_EPOCH_MS[1],   # full epoch for a continuous waveform
+    max_time              = LES_P1_EPOCH_MS[2],
     include_baseline      = TRUE,
     aggregate_electrodes  = FALSE,  # keep the electrode dimension (the point of 07b)
     aggregate_time_points = FALSE,

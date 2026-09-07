@@ -86,9 +86,10 @@ suppressPackageStartupMessages({
 
 # --- Decoding-grid constants (kept local; step 09 reads them back off the rds) ----
 # Full epoch, every EEG sensor, sampled on the fixed seq(-100, 1098, by = 2) grid (600
-# samples) documented by the importer.
-LES_DECODE_MIN_MS <- -100
-LES_DECODE_MAX_MS <- 1098
+# samples) documented by the importer. The bounds are LES_P1_EPOCH_MS in _config.R; the
+# two scalars are part of the tensor fingerprint below, so they stay unnamed doubles.
+LES_DECODE_MIN_MS <- LES_P1_EPOCH_MS[1]
+LES_DECODE_MAX_MS <- LES_P1_EPOCH_MS[2]
 
 # Channels the LiveAmp writes alongside the electrodes: its built-in accelerometer.
 # These are head-movement traces, not brain signal, and are excluded from the decoder.
@@ -165,7 +166,7 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
 # the EEG root. NULL when none are found, which the cache treats as unverifiable.
 .les_decode_source_files <- function(property) {
   pat <- les_p1_file_pattern(property)
-  dir <- data_path("raw data", "EEG")
+  dir <- erp_single_trials_path()
   if (!dir.exists(dir)) return(NULL)
   f <- c(list.files(dir, pattern = paste0(pat, "txt$"), full.names = TRUE, recursive = TRUE),
          list.files(dir, pattern = paste0(pat, "vmrk$"), full.names = TRUE, recursive = TRUE))
@@ -453,7 +454,7 @@ extract_paper1_decoding <- function(property, time_step_ms = 4L, baseline_correc
   # reduces this to the 31 EEG channels recorded in every contributing session.
   # include_baseline keeps time < 0 for the per-trial baseline step. The importer's own
   # aggregation/z-scoring is bypassed (aggregate_* = FALSE); we reshape the raw samples.
-  source(data_path("R_functions", "merge_trialbytrial_EEG_data.R"))  # lazy: heavy loader
+  source(legacy_eeg_loader())  # lazy: heavy loader
   message("[decode-extract] loading ", property,
           " (every channel present; non-EEG and session-inconsistent ones dropped after load) ...")
   raw <- merge_trialbytrial_EEG_data(
@@ -476,8 +477,14 @@ extract_paper1_decoding <- function(property, time_step_ms = 4L, baseline_correc
   # only on trial/participant/time COUNTS, so without this a corrected export that
   # leaves those counts unchanged would let 09 resume permutation blocks computed
   # from the previous amplitudes. Read back conditionally there, so tensors written
-  # before this field existed keep their current fingerprint.
-  if (requireNamespace("digest", quietly = TRUE)) built$x_digest <- digest::digest(built$X)
+  # before this field existed keep their current fingerprint. digest is pinned in
+  # renv.lock, so its absence is an environment fault and the extraction stops here,
+  # before a tensor whose checkpoints could not key on its contents is written.
+  if (!requireNamespace("digest", quietly = TRUE)) {
+    stop("[decode-extract] package 'digest' is required so that 09's checkpoints key on ",
+         "the tensor's contents; restore the pinned environment.", call. = FALSE)
+  }
+  built$x_digest <- digest::digest(built$X)
   .les_save_atomic(built, out_path)
   # Written only after the tensor is safely on disk, and capturing that file's own
   # size and mtime, so a later run cannot trust a fingerprint whose tensor has since
@@ -485,7 +492,8 @@ extract_paper1_decoding <- function(property, time_step_ms = 4L, baseline_correc
   .les_decode_write_fingerprint(property, .fp)
 
   message(sprintf(
-    "[decode-extract] saved %s  (trials=%d, channels=%d, times=%d @ %d ms; participants=%d; G=%d/UG=%d)",
+    paste0("[decode-extract] saved %s  (trials=%d, channels=%d, times=%d @ %d ms; ",
+           "participants=%d; G=%d/UG=%d)"),
     basename(out_path), dim(built$X)[1], dim(built$X)[2], dim(built$X)[3],
     time_step_ms, dplyr::n_distinct(built$meta$participant_lab_ID),
     sum(built$meta$grammaticality == "Grammatical"),

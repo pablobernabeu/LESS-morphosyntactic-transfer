@@ -5,23 +5,21 @@
 # -----------------------------------------------------------------------------
 # WHY afterany AND NOT afterok
 # ----------------------------
-# Array element 12664261_0 is expected to exit NON-ZERO even on complete success.
-# It has been executing 09_run_decoding.R since 1 Aug, and that file was overwritten
-# in place on 6 Aug. Rscript parses and evaluates one expression at a time, holding a
-# byte offset into the file, so once the analysis finishes the interpreter reads a
-# fragment of a shifted line and dies with a parse error. Element _1 (differential
-# object marking) did exactly this on 9 Aug: it wrote all three CSVs, then exited 1:0.
-# An afterok dependency would therefore never fire. See HPC_RUNBOOK.md, "Do not scp a
-# script that a running job is executing".
+# A decoding array element can exit NON-ZERO on complete success. Rscript parses and
+# evaluates one expression at a time, holding a byte offset into the file, so when
+# 09_run_decoding.R is overwritten in place while an element is executing it, the
+# interpreter reads a fragment of a shifted line once the analysis finishes and dies
+# with a parse error after writing every artefact. An afterok dependency would then
+# never fire. See HPC_RUNBOOK.md, "Do not scp a script that a running job is executing".
 #
 # This job only READS. It submits nothing, deletes nothing, and touches no results.
 # Its purpose is to capture the state at the instant the decoding element terminates,
 # so the outcome does not depend on a login-node process surviving (a watcher in /tmp
 # is node-local and is lost when the login node rotates).
 #
-# SUBMIT (arc cluster; standard QoS). Pass the job being watched: this script used
-# to hardcode 12664261, so once that run was superseded it kept reporting a job
-# cancelled weeks earlier, with stale July artefact dates, while appearing healthy.
+# SUBMIT (standard QoS). Pass the job being watched; the export is what stops the
+# watcher reporting on a superseded job, with stale artefact dates, while appearing
+# healthy.
 #   sbatch --export=ALL,LES_DECODE_WATCH_JOB=<id>_0 --dependency=afterany:<id>_0 \
 #         paper_1_transfer/hpc/08b_verify_gender_decoding.slurm
 # =============================================================================
@@ -37,7 +35,9 @@ source _shared/hpc/arc_env.sh
 # Deliberately no errexit: a missing file is a finding to report, not a reason to abort.
 set -o nounset
 
-STATUS="${HOME}/new_LESS/GENDER_DECODING_STATUS.txt"
+# arc_env.sh has changed directory to the code root, so the status file lands beside the
+# repository's top-level files.
+STATUS="${PWD}/GENDER_DECODING_STATUS.txt"
 RES="${LES_STORE}/paper_1_transfer/results"
 PROPS=(gender_agreement differential_object_marking verb_object_number_agreement)
 
@@ -81,7 +81,7 @@ PROPS=(gender_agreement differential_object_marking verb_object_number_agreement
   if [ "${READY}" = "${#PROPS[@]}" ]; then
       echo "RESULT: READY -- all three properties at n_perm=1000."
       echo "Next: pull all three properties' CSVs together (HPC_RUNBOOK.md section 2),"
-      echo "re-render both manuscripts, then cancel the stale 12664262."
+      echo "re-render both manuscripts, then cancel any superseded decoding job still queued."
   else
       echo "RESULT: NOT READY -- the three properties do not all read n_perm=1000."
       echo "Do not pull piecemeal. Investigate before collecting anything."

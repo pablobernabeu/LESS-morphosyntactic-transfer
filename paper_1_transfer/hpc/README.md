@@ -1,24 +1,25 @@
 # Paper 1 — HPC / SLURM submission scripts (Oxford ARC / HTC)
 
 Bayesian model fitting for Paper 1 (*The Neurocognition of Longitudinal L3
-Morphosyntactic Transfer*) runs on Oxford's SLURM clusters. Steps 01-05 (the
-core ERP/accuracy models) were submitted on ARC, and every heavy job to date has in
-fact run there: as of 2026-08 the ERP fits, the decoding array and the summaries are
-all ARC jobs. HTC was adopted in principle on 2026-06-30, on the grounds that every
-job here is single-node, which is HTC's high-throughput remit, and that HTC is far
-less loaded. The move was deliberately not made at the time, because CmdStan would
-have to be rebuilt on HTC first. Treat HTC as the intended destination for new work
-rather than as a description of where the current results came from. To send a job
-there, submit with `sbatch --clusters=htc --account=educ-intract <script>.slurm`,
-standard QoS only and never `--qos=priority`. The `--account` flag is required on HTC
-even though ARC does not need one. A plain `sbatch` with no `--clusters` goes to the
-login node's default cluster, which is ARC, so the recipes below submit to ARC as
-they stand. Both clusters
-use environment modules rather than a container: each job sources
+Morphosyntactic Transfer*) runs on Oxford's SLURM clusters. Steps 01 to 05 (the core ERP
+and accuracy models), the decoding array and the summaries behind the shipped results were
+all ARC jobs, run in July and August 2026. HTC was adopted in principle on 2026-06-30, on
+the grounds that every job here is single-node, which is HTC's high-throughput remit, and
+that HTC is far less loaded. The move was deferred at the time in the expectation that
+CmdStan would need rebuilding on HTC. The sensitivity refits submitted on 2026-09-01 and
+2026-09-02 then ran on HTC against the existing CmdStan tree, the project `/data` space
+being mounted at the same path on both clusters, so no rebuild was needed. The
+gender-agreement decoding array resubmitted on 2026-09-03 went to ARC. To send a job to
+HTC, submit with `sbatch --clusters=htc --account=educ-intract <script>.slurm`, standard
+QoS only and never `--qos=priority`. The `--account` flag is required on HTC even though
+ARC does not need one. A plain `sbatch` with no `--clusters`, which is what
+`submit_all.sh` issues, goes to the login node's default cluster, which is ARC, so the
+recipes below submit to ARC as they stand. The headers of `07`, `07b`, `08` and
+`00_descriptives` give the HTC form. Both clusters use environment modules,
+with no container: each job sources
 [`_shared/hpc/arc_env.sh`](../../_shared/hpc/arc_env.sh),
 which `module load`s R, points the R library + CmdStan + data + output store at
-the project `/data` space (shared across both clusters at the same path), and
-`cd`s to the code root (`~/new_LESS`). `here::here()` then anchors on the
+the project `/data` space, and `cd`s to the code root. `here::here()` then anchors on the
 `LESS Project.Rproj` sentinel. Project access is via the `educ-intract` unix group.
 
 See [`../../HPC_RUNBOOK.md`](../../HPC_RUNBOOK.md) for the full layout and the
@@ -29,8 +30,8 @@ dev-box → HPC transfer / render workflow.
 `_shared/hpc/arc_env.sh` is the single source of truth for the toolchain. It runs
 `module load R/4.5.1-gfbf-2025a` (R 4.5.1, GCC 14.2.0), points `CMDSTAN` at the
 highest-numbered CmdStan installed under `$LES_BASE/cmdstan/` unless `LES_CMDSTAN_VERSION`
-pins one, and appends `CXXFLAGS_OPTIM = -O1` to `$CMDSTAN/make/local`, because GCC 14.2.0
-raises an internal compiler error on Stan's `reduce_sum` templates at `-O2` and above.
+pins one, and builds CmdStan at `-O1` because of a GCC 14.2.0 compiler crash; see the
+header of `_shared/hpc/arc_env.sh`.
 
 Two records say what the fits ran under. `results/_provenance.csv` records the versions in
 force at fit time (R, platform, brms, cmdstanr, rstan, StanHeaders, posterior, loo, projpred,
@@ -39,17 +40,20 @@ Only stage 2a (`03_fit_erp.slurm`) writes it, so a run confined to `04`, `05`, `
 `08` leaves the file as the last ERP fitting run left it; per-fit versions are carried
 alongside it in `results/_pooled_fit_metadata.csv`. The repository's `renv.lock` pins the R
 side of the same environment, snapshotted on the cluster across both the project library and
-the R module's own, so `renv::restore()` rebuilds it. CmdStan, the compiler and the `-O1` pin
-are not R packages and are not in the lockfile; `00_install_dependencies.slurm` installs
-unpinned from CRAN and is a bootstrap rather than a restore.
+the R module's own. `_shared/hpc/00_restore_environment.slurm` restores it with
+`renv::restore()` and installs the pinned CmdStan, and `submit_all.sh with_restore` chains on
+that job. CmdStan, the compiler and the `-O1` pin are not R packages and are not in the
+lockfile. `00_install_dependencies.slurm` bootstraps a library where none exists, unpinned
+from CRAN, and is not the reproduction route.
 
 ## One-time setup
 
-The project R library (`/data/educ-intract/educ1242/new_LESS/Rlib/R-4.5`) initially held
-only the legacy frequentist stack (lme4/lmerTest). Install the Bayesian toolchain
-(brms + CmdStan, posterior, bayesplot, tidybayes, bayestestR, papaja, and the Paper 2
-resting-state packages) once. It is shared with Paper 2, so run only one of the two `00`
-scripts:
+The project R library (`$LES_BASE/Rlib/R-4.5`) initially held only the legacy frequentist
+stack (lme4/lmerTest). The pinned route to the recorded environment is
+`_shared/hpc/00_restore_environment.slurm`. The bootstrap below is for a library that does
+not yet exist: it installs the Bayesian toolchain (brms + CmdStan, posterior, bayesplot,
+tidybayes, bayestestR, papaja, and the Paper 2 resting-state packages) once, unpinned. It
+is shared with Paper 2, so run only one of the two `00` scripts:
 
 ```bash
 # as written this goes to the default cluster (ARC); prepend
@@ -86,8 +90,13 @@ takes a couple of hours. Never chain it on the 5a array with `afterok`. It reads
 the tensors, so chaining leaves a three-minute analysis queued behind a fortnight of
 permutation runs.
 
-Two further scripts sit outside the linear pipeline and are submitted by hand:
+Three further scripts sit outside the linear pipeline and are submitted by hand:
 
+- `00_descriptives.slurm` regenerates the light descriptive tables both manuscripts inject
+  (`_erp_trial_retention.csv`, `_misfiltered_share.csv`, `_accuracy_rt_screen.csv`,
+  `_accuracy_sentence_inventory.csv`, `_accuracy_input_gaps.csv`, `_sample_flow.csv`,
+  `_participants.csv`, `_participants_other_languages.csv`) by running scripts 00c, 02
+  and 00 in that order. It fits nothing and must run with every variant switch unset.
 - `08b_verify_gender_decoding.slurm` — a read-only watcher, submitted as
   `sbatch --export=ALL,LES_DECODE_WATCH_JOB=<id>_0 --dependency=afterany:<id>_0 paper_1_transfer/hpc/08b_verify_gender_decoding.slurm`.
   Both halves are mandatory. The script runs under `set -o nounset` and expands
@@ -96,7 +105,7 @@ Two further scripts sit outside the linear pipeline and are submitted by hand:
   export is also what stops the watcher reporting on a superseded job. It records what a
   terminating
   decoding element actually produced (the array's `sacct` outcome, the three gender
-  CSVs, the per-property `n_perm`) into `~/new_LESS/GENDER_DECODING_STATUS.txt`.
+  CSVs, the per-property `n_perm`) into `GENDER_DECODING_STATUS.txt` at the code root.
   `afterany` rather than `afterok` because an element whose script file was
   overwritten mid-run exits non-zero even after writing every artefact.
 - `99_diagnose_ice.slurm`, and its follow-up `99b_test_O2.slurm` — the retained
@@ -109,12 +118,14 @@ Two further scripts sit outside the linear pipeline and are submitted by hand:
 ```bash
 cd ~/new_LESS
 bash paper_1_transfer/hpc/submit_all.sh                # toolchain already installed
-bash paper_1_transfer/hpc/submit_all.sh with_install   # install toolchain first
+bash paper_1_transfer/hpc/submit_all.sh with_restore   # restore renv.lock first (pinned)
+bash paper_1_transfer/hpc/submit_all.sh with_install   # bootstrap an unpinned library first
 ```
 
 `--dependency=afterok` so fitting starts only after the matching extraction succeeds,
 and the summary job only after all fits succeed. The chain covers stages 1a to 3 only.
-Stages 4, 4b, 5a and 5b (`07`, `07b`, `08`) are submitted by hand. Submit individual
+Stages 4, 4b, 5a and 5b (`07`, `07b`, `08`) and `00_descriptives.slurm` are submitted by
+hand; the header of `submit_all.sh` lists them with their prerequisites. Submit individual
 stages with plain `sbatch paper_1_transfer/hpc/<script>.slurm` if preferred.
 
 The chain exports no variant switches, so it produces the base random-effect ERP fits. The
@@ -152,8 +163,12 @@ that has to be trimmed before it can go into a `--dependency` spec.
 
 Every variant is opt-in through the environment, exported on the submission line
 (`sbatch --export=ALL,VAR=value …`). With none of them set the pipeline reproduces the
-default artefacts exactly. Each variant writes its own tagged files, so a variant run never
-clashes with the reported one or with another variant.
+default artefacts exactly. Every variant writes its own tagged fit, convergence, summary and
+metadata files. One file is not tagged. `results/_provenance.csv` is rewritten at the end of
+every fitting run whatever switches are set, so a sensitivity run leaves it describing that
+run, and `recorded_utc` says which run wrote it. Restore the file from version control after
+a variant run, submit the reported stage last, or export `LES_PROVENANCE_SKIP=1` with the
+variant run.
 
 | Variable | Value | Export it to | Artefact tag | What it selects |
 |----------|-------|--------------|--------------|-----------------|
@@ -163,6 +178,8 @@ clashes with the reported one or with another variant.
 | `LES_P1_KEEP_MISFILTERED` | `1` | 1a (`01`), 2a (`03`) | `_keepmisfiltered` | retain the four 1 Hz Session-3 datasets the primary analysis drops. It changes the data, so the extraction stage must be re-run under it before the fit stage. Do not export it to the decoding stage (`08`): that stage honours it, but neither its tensor nor its `*_decoding_*.csv` outputs are tagged, so a decoding run under this variable overwrites the reported decoding artefacts at their reported names. |
 | `LES_P1_ACC_DIVERSITY` | `1` | 1b (`02`), 2b (`04`) | `_diversity` | add the LHQ3 multilingual language diversity score to the accuracy models. Also data-changing: re-run `02` under it before `04`. |
 | `LES_PRIOR_PREDICTIVE` | `1` | 2a (`03`), 2b (`04`) | `*_priorpc.png` | write a prior predictive check before fitting; changes no fit |
+| `LES_P1_PRIORPC_REPRESENTATIVE` | `<cell_tag>` | 2a (`03`), with `LES_PRIOR_PREDICTIVE=1` | `prior_predictive_check.png` | copy the named cell's prior predictive check to the file the manuscript shows; see `../figures/README.md` |
+| `LES_PROVENANCE_SKIP` | `1` | 2a (`03`) | none | skip the run-level provenance write, so `results/_provenance.csv` keeps describing the reported fits |
 
 The tags compose, in the order `_keepmisfiltered`, `_weakprior`, `_itemslope`, `_retfree`
 (see `cell_tag` in `scripts/03_fit_brms_erp.R`), so every combination caches to its own

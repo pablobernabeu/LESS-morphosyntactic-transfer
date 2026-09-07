@@ -1,12 +1,18 @@
 #!/bin/bash
 # =============================================================================
-# 00_install_dependencies.slurm  --  provision the Bayesian toolchain ONCE (ARC)
+# 00_install_dependencies.slurm  --  bootstrap the Bayesian toolchain where none exists (ARC)
 # -----------------------------------------------------------------------------
 # Installs brms + the CmdStan C++ toolchain, posterior/bayesplot/tidybayes/
 # bayestestR, papaja and the Paper 2 resting-state stack INTO the project-space R
-# library (/data/educ-intract/educ1242/new_LESS/Rlib/R-4.5) and builds CmdStan under
-# /data/educ-intract/educ1242/new_LESS/cmdstan. Run a SINGLE time before any model-fitting
-# job (it is shared with Paper 2 -- do not run both 00 scripts).
+# library ($LES_BASE/Rlib/R-4.5) and builds CmdStan under $LES_BASE/cmdstan. Run a
+# SINGLE time before any model-fitting job (it is shared with Paper 2 -- do not run both
+# 00 scripts).
+#
+# This is a bootstrap for a library that does not yet exist, resolved against whatever
+# CRAN ships on the day, and it is not the reproduction route. To rebuild the recorded
+# environment, restore renv.lock through _shared/hpc/00_restore_environment.slurm
+# (submit_all.sh with_restore chains on it), which pins the packages and the CmdStan
+# version.
 #
 # Package installation + the CmdStan build need OUTBOUND NETWORK and a compiler.
 # The R/4.5.1-gfbf-2025a module brings the gfbf/2025a toolchain (GCC 14.2.0 with

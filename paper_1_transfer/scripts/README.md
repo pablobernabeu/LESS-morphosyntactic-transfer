@@ -16,13 +16,17 @@ The numbering has no step 6, and a letter suffix means a script added beside an 
 stage (`00b`, `01b`, `07c`, `09b`), which is why it does not take a number of its own.
 Nothing reads a script by position in a directory listing, so the gaps are harmless.
 
-Three files sit outside the numbered chain:
+Four files sit outside the numbered chain:
 
-- `test_exclusion_guard.R` — the regression test for the mis-filtered-dataset exclusion
-  and its staleness guard. Run it after touching that logic.
-- `tests/test_summarise_cells.R` — validates step 1's single-trial transform
+- `test_exclusion_guard.R` is the regression test for the mis-filtered-dataset exclusion
+  and its staleness guard, and for the decoding seed's repeated default. Run it after
+  touching that logic.
+- `tests/test_summarise_cells.R` validates step 1's single-trial transform
   synthetically, because the real merge is HPC-scale and must not be run locally.
-- `09b_assemble_confirmatory_timecourse.R` — opt-in, described below.
+- `tests/test_erp_retention_artefact.R` pins the headline values of
+  `../results/_erp_trial_retention.csv` (step 0c), so a regenerated table with different
+  numbers is reported by the test and never refused by the script.
+- `09b_assemble_confirmatory_timecourse.R` is opt-in, described below.
 
 ## Where the data are
 

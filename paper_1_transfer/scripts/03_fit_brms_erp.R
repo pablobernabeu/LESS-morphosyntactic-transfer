@@ -91,7 +91,18 @@
 #   LES_P1_ITEM_SLOPE=1     fit the maximal by-item structure, which is what the
 #                           manuscript reports; caches under the `_itemslope` tag
 #   LES_PRIOR_SET=weak      refit under the weakly-informative sensitivity baseline
+#   LES_P1_RETENTION_FREE=1 add the explicit Session-6 offset; caches under `_retfree`
+#   LES_P1_KEEP_MISFILTERED=1
+#                           retain the four 1 Hz Session-3 datasets; caches under
+#                           `_keepmisfiltered` (see _config.R)
 #   LES_PRIOR_PREDICTIVE=1  write a prior predictive check before fitting
+#   LES_P1_PRIORPC_REPRESENTATIVE=<cell_tag>
+#                           with LES_PRIOR_PREDICTIVE=1, also copy that cell's check to
+#                           figures/prior_predictive_check.png, the file the manuscript
+#                           shows (see figures/README.md)
+#   LES_PROVENANCE_SKIP=1   leave results/_provenance.csv untouched at the end of the
+#                           run, so a sensitivity run does not overwrite the record of
+#                           the reported fits
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -138,7 +149,8 @@ les_p1_retention_tag  <- function() if (les_p1_retention_free()) "_retfree" else
 # --- Build the cell-specific model formula ------------------------------------
 les_p1_erp_formula <- function(macroregion) {
   spatial <- if (macroregion == "lateral") {
-    "z_recoded_grammaticality * z_recoded_hemisphere + z_recoded_grammaticality * z_recoded_caudality"
+    paste0("z_recoded_grammaticality * z_recoded_hemisphere",
+           " + z_recoded_grammaticality * z_recoded_caudality")
   } else {
     "z_recoded_grammaticality * z_recoded_caudality"
   }
@@ -216,7 +228,8 @@ fit_paper1_erp_cell <- function(property, window, macroregion) {
            "retention offset from the linear trend; this cell has ", n_sessions,
            ". For a two-session property the linear term already is the retention change.")
     }
-    dat$z_retention <- as.numeric(dat$recoded_session == max(dat$recoded_session, na.rm = TRUE)) - 0.5
+    last_session    <- max(dat$recoded_session, na.rm = TRUE)
+    dat$z_retention <- as.numeric(dat$recoded_session == last_session) - 0.5
   }
 
   model_vars <- les_p1_erp_model_vars(macroregion)
@@ -237,14 +250,29 @@ fit_paper1_erp_cell <- function(property, window, macroregion) {
       # would otherwise compress the data to an unreadable spike at zero.
       x_lab = "Single-trial amplitude (within-participant SD units)",
       xlim  = c(-8, 8)), silent = TRUE)
+    # Opt-in: the manuscript includes figures/prior_predictive_check.png from disk, and no
+    # default run writes that name. Naming the representative cell's tag in
+    # LES_P1_PRIORPC_REPRESENTATIVE makes this run copy that cell's panel to it, so the
+    # committed figure has a recorded source. With the variable unset nothing is copied.
+    rep_tag <- Sys.getenv("LES_P1_PRIORPC_REPRESENTATIVE", unset = "")
+    if (nzchar(rep_tag) && identical(cell_tag, rep_tag)) {
+      src <- paper1_figures(paste0(cell_tag, "_priorpc.png"))
+      dst <- paper1_figures("prior_predictive_check.png")
+      if (file.exists(src)) {
+        les_assert_readonly_data(dst)
+        file.copy(src, dst, overwrite = TRUE)
+        message("[erp] ", cell_tag, ": prior predictive check copied to ", basename(dst))
+      }
+    }
   }
 
   fit <- les_brm(
     formula = les_p1_erp_formula(macroregion),
     data    = dat,
     family  = gaussian(),
-    prior   = les_erp_prior(window, property, macroregion),  # informative; LES_PRIOR_SET=weak -> sensitivity baseline
-    file    = paper1_results(cell_tag)     # brms caches <cell_id>[_weakprior][_itemslope].rds here
+    # Informative; LES_PRIOR_SET=weak selects the sensitivity baseline.
+    prior   = les_erp_prior(window, property, macroregion),
+    file    = paper1_results(cell_tag)     # brms caches <cell_tag>.rds here
   )
 
   # --- Diagnostics & reporting artefacts --------------------------------------
@@ -288,11 +316,19 @@ fit_paper1_erp_cell <- function(property, window, macroregion) {
   }
   # Record the environment that actually produced these fits, so the manuscript can
   # report versions and seeds instead of describing the environment in the abstract.
-  try(les_write_provenance(
-    paper1_results(),
-    seeds = list(LES_SEED = LES_SEED,
-                 LES_DECODE_SEED = Sys.getenv("LES_DECODE_SEED", unset = "20260702"))),
-    silent = TRUE)
+  # The file is untagged and is rewritten by every run whatever variant switches are set,
+  # so a sensitivity run leaves it describing that run. LES_PROVENANCE_SKIP=1 keeps the
+  # existing record in place for such runs. The decoding seed recorded here is the
+  # default the decoding stage falls back on when its job exports none (see
+  # LES_P1_DECODE_SEED_DEFAULT in _config.R).
+  if (!identical(Sys.getenv("LES_PROVENANCE_SKIP"), "1")) {
+    try(les_write_provenance(
+      paper1_results(),
+      seeds = list(LES_SEED = LES_SEED,
+                   LES_DECODE_SEED = Sys.getenv("LES_DECODE_SEED",
+                                                unset = as.character(LES_P1_DECODE_SEED_DEFAULT)))),
+      silent = TRUE)
+  }
   message("[erp] done.")
 }
 
