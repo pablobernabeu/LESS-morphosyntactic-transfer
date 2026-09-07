@@ -578,6 +578,7 @@ This file is machine-written by `_shared/R/write_codebook.R` and is not edited b
 | `cluster_p_fdr` | numeric | Benjamini-Hochberg adjusted cluster_p across the confirmatory clusters, which are those of the overall block; NA on exploratory rows and outside clusters. | paper_1_transfer/scripts/09_run_decoding.R (09b_assemble_confirmatory_timecourse.R when assembled from checkpoints) |
 | `significant_fdr` | logical | TRUE when cluster_p_fdr < 0.05. | paper_1_transfer/scripts/09_run_decoding.R (09b_assemble_confirmatory_timecourse.R when assembled from checkpoints) |
 | `inference` | character | 'confirmatory' for the overall block, 'exploratory' for the session-resolved breakdowns. | paper_1_transfer/scripts/09_run_decoding.R (09b_assemble_confirmatory_timecourse.R when assembled from checkpoints) |
+
 ## `gender_agreement_decoding_generalization.csv`
 
 600 data row(s), 6 column(s).
