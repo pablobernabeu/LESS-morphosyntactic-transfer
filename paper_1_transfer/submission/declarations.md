@@ -53,7 +53,9 @@ Advanced Research Computing facility of the University of Oxford.
 
 ## Ethics statement (as in the Method)
 
-The project was registered with the Norwegian Agency for Shared Services in Education
-and Research (Sikt; project 2559611). All procedures complied with the relevant laws and
-institutional guidelines, the privacy rights of the participants were observed, and every
-participant gave written informed consent.
+  The project was registered with the Norwegian Agency for Shared Services in Education
+  and Research (Sikt; project 2559611). The approving ethics committee, approval date, and
+  reference number are TBC. All procedures complied with the relevant laws and institutional
+  guidelines, the privacy rights of the participants were observed, and every participant gave
+  written informed consent. The 16-year-old participant was covered by the study's self-consent
+  procedure.

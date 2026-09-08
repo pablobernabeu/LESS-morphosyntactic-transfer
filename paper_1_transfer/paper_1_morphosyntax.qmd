@@ -76,31 +76,30 @@ author:
       - ref: nebrija
 abstract: |
   Theories of third-language (L3) morphosyntactic transfer disagree over whether
-  prior-language influence is wholesale or property-by-property, and are silent on
-  how it consolidates. We tracked electrophysiological and behavioural signatures of
-  three properties (subject--verb gender agreement, differential object marking,
-  verb--object number agreement) as Norwegian--English bilinguals acquired
-  Mini-English or Mini-Norwegian over four sessions, from the first post-training
-  session to post-consolidation retention. Single-trial event-related potential (ERP)
-  amplitudes and judgement accuracy were analysed in Bayesian multilevel models
-  with informative priors. Gender agreement, whose Mini-Norwegian realisation
-  aligns with the learners' first language, produced a grammaticality effect that
-  grew with training. In a refit that freed the retention session from that trend,
-  the effect at retention did not depart credibly from the trend on average, but the
-  two languages diverged credibly, the Mini-English estimate falling below the
-  Mini-Norwegian one. Only the group difference is supported. Behaviourally, the
-  same property favoured Mini-Norwegian learners, the design's only
-  first-language-congruent advantage. Differential object marking yielded a
-  transient early effect, a late language-conditioned modulation and a behavioural
-  decline at retention. Verb--object number agreement, novel to both prior
-  languages, strengthened across the retention interval, and within groups only for
-  Mini-Norwegian learners. In whole-scalp decoding, only gender agreement separated
-  the conditions on a baseline at chance. Descriptively, no property's pattern
-  generalised to another, consistent with property-specific coding. Both novel
-  properties showed source-language modulations of opposite sign, unexplained. The
-  growth of the gender-agreement advantage across sessions favours a
-  property-by-property account over a wholesale one, though one dissociating
-  property leaves the conclusion provisional.
+  prior-language influence is wholesale or property-specific, and say little about
+  how it changes with experience. We tracked behavioural and electrophysiological
+  responses to three grammatical properties in 65
+  Norwegian--English bilinguals learning Mini-English or Mini-Norwegian across four
+  grammaticality-judgement sessions, including a post-consolidation retention test;
+  64 contributed usable judgement data and 63 usable ERP data. Single-trial ERP
+  amplitudes and judgement accuracy were analysed in Bayesian multilevel models, with
+  whole-scalp decoding used to test whether grammaticality was represented in
+  distributed activity. Gender agreement, whose Mini-Norwegian realisation matched
+  the first language, showed the clearest transfer signature: its ERP grammaticality
+  effect grew across sessions, and at retention the effect differed between
+  mini-languages, with the Mini-English estimate lower than the Mini-Norwegian
+  estimate. Behaviourally, this property also favoured Mini-Norwegian learners, the
+  only first-language-congruent advantage. Differential object marking showed a
+  transient early effect, a late language-conditioned modulation, and declining
+  accuracy at retention. Verb--object number agreement, novel to both prior languages,
+  strengthened across the retention interval, but only within Mini-Norwegian learners.
+  The two novel properties also showed source-language modulations of opposite sign,
+  which neither account explains. Whole-scalp decoding distinguished grammatical from
+  ungrammatical trials only for gender agreement. The three properties therefore
+  followed distinct trajectories, and the only first-language-congruent advantage
+  appeared where the artificial-language form matched Norwegian. These findings favour
+  property-specific over wholesale transfer, although the conclusion remains
+  provisional because only gender agreement clearly dissociated the accounts.
 keywords: [L3 acquisition, morphosyntactic transfer, ERP, artificial language, Bayesian multilevel models, retention]
 bibliography: references.bib
 floatsintext: true
@@ -1564,7 +1563,13 @@ language Norwegian, second language English) took part, each assigned to learn o
 of the two miniature languages. Assignment followed a fixed rule on the participant
 identifier, giving `r flow_n("enrolled", "n_mini_english")` Mini-English and
 `r flow_n("enrolled", "n_mini_norwegian")` Mini-Norwegian learners, so language is a
-between-participants factor. Of the `r pstat("n_lhq3", "value", 0)` participants
+between-participants factor. At the Norwegian site, odd-numbered participant
+identifiers were assigned to Mini-English and even-numbered identifiers to
+Mini-Norwegian; this was a deterministic allocation rather than a random assignment.
+The six-session protocol comprised an approximately 1.5-hour home baseline (Session 1),
+laboratory sessions of approximately 2.5 hours (Session 2), 2.5 hours (Session 3), and
+3 hours (Session 4), a 1-hour home retest (Session 5), and a 2.5-hour laboratory
+retention session (Session 6). Of the `r pstat("n_lhq3", "value", 0)` participants
 with a Language History Questionnaire record [LHQ3: @lhq3], the mean age was
 `r pstat("age_years")` years ($SD = `r pstat("age_years", "sd")`$, range
 `r pstat("age_years", "vmin", 0)`--`r pstat("age_years", "vmax", 0)`).`r minors_note()`
@@ -1594,9 +1599,13 @@ participants, the differential-object-marking models to
 models to `r erp_model_n("verb_object_number_agreement")`. The
 grammaticality-judgement analyses draw on `r flow_n("usable_accuracy")` participants
 (@fig-flow). The project was registered with the Norwegian Agency for Shared Services in
-Education and Research (Sikt; project 2559611). All procedures complied
+Education and Research (Sikt; project 2559611). The approving ethics committee, approval
+date, and reference number are TBC. All procedures complied
 with the relevant laws and institutional guidelines, the privacy rights of the participants
-were observed, and every participant gave written informed consent.
+were observed, and every participant gave written informed consent. The 16-year-old
+participant was covered by the study's self-consent procedure. Participants were
+compensated with shopping vouchers worth NOK 250 per hour of participation, pro rata,
+and received an additional NOK 400 completion bonus after the sixth and final session.
 
 ```{r}
 #| label: fig-flow
