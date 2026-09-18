@@ -25,13 +25,21 @@ models* below.
 | `HPC_RUNBOOK.md` | Cluster layout, job submission, pulling results back, and the failure modes worth knowing about. |
 | `renv.lock` | The R packages of the **fitting** environment, pinned at the versions the cluster library held. |
 
-## Where the data are
+## Where the data are, and what is not
 
 The raw electroencephalographic recordings are far too large for a git repository and are
 deposited on OSF at <https://osf.io/tq7vy>. Nothing in this repository writes to them: the
 read-only contract is enforced at run time by `les_assert_readonly_data()` in
 `_shared/R/03_data_manifest.R`, which stops any script whose write path resolves inside a
 data directory.
+
+**Nothing identifying is here, and that is deliberate.** This repository has no `data/`
+directory. Beyond the size of the recordings, the study ran six sessions with a cohort of
+65, at known sites and on known dates, so the file that links each participant's
+identifiers to the date and time of each session is identifying in combination even though
+it carries no name. That file is not deposited in any public archive. For the same reason
+every derived table published here is screened for fields that would reconstruct session
+timing, and the tables report elapsed durations rather than clock times.
 
 What *is* here is everything derived from those recordings that the paper depends on. The
 pooled posterior summaries, the retention contrasts, the convergence diagnostics, the
