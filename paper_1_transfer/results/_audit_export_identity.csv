@@ -1,0 +1,26 @@
+quantity,value,ci_low,ci_high,unit,source_script,note
+exports_audited,1344,,,exports,paper_1_transfer/audit/n6_01_trial_identity.py,"trial-by-trial exports, copies excluded"
+participant_sessions_audited,210,,,participant-sessions,paper_1_transfer/audit/n6_01_trial_identity.py,"by session: S2: 63, S3: 56, S4: 55, S6: 36"
+recordings_shared,2,,,recordings,paper_1_transfer/audit/n6_01_trial_identity.py,recordings whose histories serve two participant-sessions: S4/5 and S6/5; S3/48 and S3/58
+histories_with_other_recordings_markers,3,,,participant-sessions,paper_1_transfer/audit/n6_01_trial_identity.py,"the history root carries the markers and start time of another recording than the archived raw file of the same participant-session: S2/7, S3/48, S6/5. For S3/48 the signal is another participant's too; for S6/5 and S2/7 only the markers are (protocol Amendments 2 and 6)"
+exports_reproduced_by_history,1337,,,exports,paper_1_transfer/audit/n7_01_mechanism.py,"of 1337 exports with a marker file, every segment reproduced by the history node, markers and positions included"
+split_half_r_mean,0.882614,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"odd- vs even-trial posterior average, 0-600 ms, over 210 participant-sessions"
+split_half_r_s6_5,0.28,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"S6/5, all trials"
+split_half_r_s101_s102_s6_5,0.129,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"S6/5, grammatical and ungrammatical trials"
+loo_grand_average_r_s6_5,0.588,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,S6/5 against the leave-one-out grand average of its session
+split_half_r_s2_7,0.003,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"S2/7, all trials"
+split_half_r_s101_s102_s2_7,-0.048,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"S2/7, grammatical and ungrammatical trials"
+loo_grand_average_r_s2_7,0.011,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,S2/7 against the leave-one-out grand average of its session
+split_half_r_s2_63,0.32,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"S2/63, all trials"
+split_half_r_s101_s102_s2_63,0.315,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"S2/63, grammatical and ungrammatical trials"
+loo_grand_average_r_s2_63,0.416,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,S2/63 against the leave-one-out grand average of its session
+split_half_r_others_min,0.32,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,lowest among the exports not found misaligned (S2/63)
+loo_grand_average_r_s2_others_min,0.029,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,lowest Session 2 grand-average correlation among the other participants (S2/21); median 0.56
+split_half_r_id7_other_sessions_min,0.96,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,"lab ID 7, Sessions 3, 4 and 6"
+split_half_r_id7_other_sessions_max,0.976,,,correlation,paper_1_transfer/audit/n6_03_screen_exports.py,
+pair_id48_id58_s3_trials,198,,,trials,paper_1_transfer/audit/n6_04_duplicate_pairs.py,S3/48 vs S3/58: trials in the first export
+pair_id48_id58_s3_paired,198,,,trials,paper_1_transfer/audit/n6_04_duplicate_pairs.py,S3/48 vs S3/58: trials of the first export whose time stamp occurs in the second
+pair_id48_id58_s3_median_r,0.908068,,,correlation,paper_1_transfer/audit/n6_04_duplicate_pairs.py,S3/48 vs S3/58: median correlation of time-stamp-paired trials at Pz; quartiles 0.88 to 0.94; control (next time stamp) median 0.18
+pair_id5_s6_s4_trials,184,,,trials,paper_1_transfer/audit/n6_04_duplicate_pairs.py,S6/5 vs S4/5: trials in the first export
+pair_id5_s6_s4_paired,183,,,trials,paper_1_transfer/audit/n6_04_duplicate_pairs.py,S6/5 vs S4/5: trials of the first export whose time stamp occurs in the second
+pair_id5_s6_s4_median_r,-0.0279752,,,correlation,paper_1_transfer/audit/n6_04_duplicate_pairs.py,S6/5 vs S4/5: median correlation of time-stamp-paired trials at Pz; quartiles -0.18 to 0.17; control (next time stamp) median 0.03

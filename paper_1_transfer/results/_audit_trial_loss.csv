@@ -1,0 +1,44 @@
+quantity,value,ci_low,ci_high,unit,source_script,note
+events_recorded,64427,,,events,paper_1_transfer/audit/n7_04_events.py,"S101/S102/S103 markers in the raw .vmrk files of 210 participant-sessions (Sessions 2, 3, 4, 6)"
+events_recorded_lag_not5,21508,,,events,paper_1_transfer/audit/n7_04_events.py,"property-to-condition interval other than five samples, raw markers; by lag: 4: 118, 6: 21347, 7: 42, 8: 1"
+events_recorded_lag_not5_pct,33.3835,,,percent of recorded events,paper_1_transfer/audit/n7_04_events.py,
+lag5_share_recording_min,23.6111,,,percent of a recording's events,paper_1_transfer/audit/n7_04_events.py,lowest per-recording share of five-sample intervals
+lag5_share_recording_max,81.25,,,percent of a recording's events,paper_1_transfer/audit/n7_04_events.py,highest per-recording share of five-sample intervals
+events_history,64287,,,events,paper_1_transfer/audit/n7_01_mechanism.py,"S10x events in the node feeding the first-step segmentation of every export history; differs from events_recorded where a history holds another recording (S2/7, S3/48, S6/5)"
+events_history_lag_not5,21520,,,events,paper_1_transfer/audit/n7_01_mechanism.py,"by lag: 4: 117, 6: 21359, 7: 43, 8: 1"
+events_history_lag_not5_exported,0,,,events,paper_1_transfer/audit/n7_01_mechanism.py,events at a lag other than five samples that reached an export
+events_history_lag5_kept_parent_not_exported,0,,,events,paper_1_transfer/audit/n7_01_mechanism.py,five-sample events whose first-step epoch survived and that still did not reach an export
+events_history_lag_rule_lost,21354,,,events,paper_1_transfer/audit/n7_01_mechanism.py,lost to the five-sample rule with the first-step epoch kept (removal assigned first)
+events_history_no_parent,16,,,events,paper_1_transfer/audit/n7_01_mechanism.py,"no first-step epoch: window over a bad interval marked at raw-data inspection, or across a recording gap"
+trials_exported,42444,,,trials,paper_1_transfer/audit/n7_01_mechanism.py,segments in the 1344 trial-by-trial exports
+trials_exported_with_vmrk,42219,,,trials,paper_1_transfer/audit/n7_01_mechanism.py,"segments in the 1337 exports that have a marker file, which is what the legacy importer reads"
+exports_without_vmrk,7,,,exports,paper_1_transfer/audit/n7_01_mechanism.py,"225 trials; S3/14 (S1_S101, S1_S102), S3/17 (S1_S101), S3/19 (S2_S103), S4/34 (S3_S101 to S3_S103)"
+artefact_nodes,448,,,nodes,paper_1_transfer/audit/n7_02_summarise_mechanism.py,"semi-automatic inspection nodes on the export chains; criteria: step 30 uV/ms, range 100 uV within 200 ms, activity 0.5 uV within 100 ms, each marked 200 ms either side"
+epochs_removed,473,,,first-step epochs,paper_1_transfer/audit/n7_02_summarise_mechanism.py,removed after review (one critical word each)
+epochs_removed_flagged,473,,,first-step epochs,paper_1_transfer/audit/n7_02_summarise_mechanism.py,removed epochs that carried a stored automatic detection
+epochs_flagged_kept,5206,,,first-step epochs,paper_1_transfer/audit/n7_02_summarise_mechanism.py,flagged by the criteria and kept on review
+epochs_flagged,5679,,,first-step epochs,paper_1_transfer/audit/n7_02_summarise_mechanism.py,
+epochs_removed_lag5,314,,,events,paper_1_transfer/audit/n7_02_summarise_mechanism.py,"removed epochs whose critical word had a five-sample interval, i.e. trials lost to the review alone"
+epochs_removed_pct_of_history_events,0.735763,,,percent of events_history,paper_1_transfer/audit/n7_02_summarise_mechanism.py,
+trigger_step_mean_ms,10.7122,,,ms,paper_1_transfer/audit/n7_02_summarise_mechanism.py,"mean of the three steps from the word-identity to the condition trigger, history events (nominal 10 ms)"
+label_offset_mean_ms,1.60786,,,ms,paper_1_transfer/audit/n7_02_summarise_mechanism.py,"how far epoch labels understate time since the word-identity trigger, exported epochs"
+label_offset_min_ms,0,,,ms,paper_1_transfer/audit/n7_02_summarise_mechanism.py,
+label_offset_max_ms,8,,,ms,paper_1_transfer/audit/n7_02_summarise_mechanism.py,1 of 42444 exported epochs exceed 6 ms
+actual_events_kept_pct,66.0227,,,percent of events_history,paper_1_transfer/audit/n7_03_alternatives.py,events the actual two-step segmentation kept
+tolerant_events_kept_pct,99.1725,,,percent of events_history,paper_1_transfer/audit/n7_03_alternatives.py,"child epoch -128..1068 ms, which tolerates one sample of jitter either way"
+tolerant_events_recovered_pct,33.1498,,,percent of events_history,paper_1_transfer/audit/n7_03_alternatives.py,events the tolerant rule would keep and the actual rule did not
+tolerant_trials_ratio,1.5021,,,ratio to the trials kept,paper_1_transfer/audit/n7_03_alternatives.py,"trials under the tolerant rule over trials exported, all conditions"
+tolerant_trials_ratio_s101_s102,1.50861,,,ratio to the trials kept,paper_1_transfer/audit/n7_03_alternatives.py,grammatical and ungrammatical trials only
+or_loss_ungrammatical_vs_grammatical,1.01429,0.972126,1.05829,odds ratio,paper_1_transfer/audit/n7_06_condition_tests.py,"Mantel-Haenszel, strata = recording x property (413), analysed recordings as decided on 17 September 2026, Sessions 2-6 pooled, 39638 events; CMH p = 0.512"
+or_review_removal_ungrammatical_vs_grammatical,0.905992,0.6861,1.19636,odds ratio,paper_1_transfer/audit/n7_06_condition_tests.py,removal on review among five-sample events; CMH p = 0.485
+s6_me_gap_gender_pp,-4.167,,,percentage points of presented trials,paper_1_transfer/audit/n7_12_retention_by_group.py,"grammatical minus ungrammatical retention of the legacy exports, Mini-English, Session 6, 17 recordings analysed as decided on 17 September 2026 (without the misaligned export of lab ID 5, whose re-segmented record entered later)"
+s6_me_gap_dom_pp,-1.103,,,percentage points of presented trials,paper_1_transfer/audit/n7_12_retention_by_group.py,"grammatical minus ungrammatical retention of the legacy exports, Mini-English, Session 6, 17 recordings analysed as decided on 17 September 2026 (without the misaligned export of lab ID 5, whose re-segmented record entered later)"
+s6_me_gap_voa_pp,-6.74,,,percentage points of presented trials,paper_1_transfer/audit/n7_12_retention_by_group.py,"grammatical minus ungrammatical retention of the legacy exports, Mini-English, Session 6, 17 recordings analysed as decided on 17 September 2026 (without the misaligned export of lab ID 5, whose re-segmented record entered later)"
+s6_me_gap_mean_pp,-4.00333,,,percentage points of presented trials,paper_1_transfer/audit/n7_12_retention_by_group.py,"mean of the three properties (equal to the pooled gap, since every cell presented the same number)"
+s6_me_or_loss_ungrammatical_vs_grammatical,0.826776,0.728619,0.938157,odds ratio,paper_1_transfer/audit/n7_13_retention_models.R,"binomial GLMM, condition x session x language with participant and recording intercepts; p = 0.0032"
+gl_narrowing_trialdep_pct_min,8.6632,,,percent of the interval,paper_1_transfer/audit/n7_20_summarise_precision.R,"projected narrowing of the grammaticality x language interval under a tolerant re-export, 6 window x macroregion cells, with a trial intercept and the grammaticality x session slope (the dependence the October model handles); lme4, 17 September sample"
+gl_narrowing_trialdep_pct_median,9.09391,,,percent of the interval,paper_1_transfer/audit/n7_20_summarise_precision.R,"projected narrowing of the grammaticality x language interval under a tolerant re-export, 6 window x macroregion cells, with a trial intercept and the grammaticality x session slope (the dependence the October model handles); lme4, 17 September sample"
+gl_narrowing_trialdep_pct_max,10.0406,,,percent of the interval,paper_1_transfer/audit/n7_20_summarise_precision.R,"projected narrowing of the grammaticality x language interval under a tolerant re-export, 6 window x macroregion cells, with a trial intercept and the grammaticality x session slope (the dependence the October model handles); lme4, 17 September sample"
+gl_narrowing_clusterrows_pct_min,1.92969,,,percent of the interval,paper_1_transfer/audit/n7_20_summarise_precision.R,"the same under the August structure, which treated the cluster rows of a trial as independent"
+gl_narrowing_clusterrows_pct_median,2.62735,,,percent of the interval,paper_1_transfer/audit/n7_20_summarise_precision.R,"the same under the August structure, which treated the cluster rows of a trial as independent"
+gl_narrowing_clusterrows_pct_max,3.51125,,,percent of the interval,paper_1_transfer/audit/n7_20_summarise_precision.R,"the same under the August structure, which treated the cluster rows of a trial as independent"

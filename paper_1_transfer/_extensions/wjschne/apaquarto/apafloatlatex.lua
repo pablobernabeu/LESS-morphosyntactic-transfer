@@ -98,13 +98,53 @@ local processfloat = function(float)
     --quarto.log.output(float.attributes)
     if float.attributes["apa-longtable"] == "true" and not journalmode then
       local blocks = pandoc.Blocks({})
-      -- Use Quarto's native longtable output (caption + label included)
-      if float.__quarto_custom_node then
-        blocks:insert(float.__quarto_custom_node)
-      else
-        blocks:insert(float.content)
+      -- LOCAL PATCH (2026-09-18), not upstream apaquarto 5.0.18.
+      -- A long table is set in the running text, not in a float, so its note
+      -- inherited the manuscript's double spacing, while every figure note and
+      -- the single-spaced table body above it are single-spaced. Set the note
+      -- single-spaced (setspace's \setstretch; apatemplate.tex loads setspace)
+      -- and flush left, so that the specific note of a list-form apa-note, a
+      -- second paragraph, is not indented like running text. A group is used
+      -- in place of the singlespace environment, whose opening \vskip widened
+      -- the gap between table and note by half a line. The space after the
+      -- group matches the separation a float keeps from the text below it.
+      -- Paper 1 addition (this copy only): a table is kept with its note.
+      -- Set after the longtable, a note could be cut off from it: longtable
+      -- packs the part of a table on its last page into one box, so nothing on
+      -- that page can move once the table is set, and a note that did not fit
+      -- went to the next page alone, above the next table's caption. The note is
+      -- therefore typeset into a box before the table (with the caption title,
+      -- to measure both) and set as the table's last row by \LESnoteintable, so
+      -- that longtable's own page breaking keeps it with the last rows.
+      -- \LESneedtable then decides where the table starts: a table that fits in
+      -- a set share of the page moves to the next page whole when it does not
+      -- fit on this one. Both macros are defined in the Paper 1 header-includes.
+      -- A table withheld from the draft is a placeholder paragraph with no
+      -- longtable, and its note follows it as before, breakable only with at
+      -- least two lines on each page.
+      -- Re-apply this if the extension is updated.
+      local nrows = 0
+      local found = false
+      if float.content and float.content.walk then
+        float.content:walk({
+          Table = function(tb)
+            found = true
+            nrows = nrows + #tb.head.rows + #tb.foot.rows
+            for _, b in ipairs(tb.bodies) do nrows = nrows + #b.head + #b.body end
+          end
+        })
       end
-      -- Append apa-note if present
+      -- A table withheld from the draft is a one-line placeholder paragraph.
+      if not found then nrows = 2 end
+      local capinl = pandoc.Inlines({})
+      if float.caption_long then
+        if float.caption_long.content then
+          capinl = float.caption_long.content
+        else
+          capinl = pandoc.utils.blocks_to_inlines(float.caption_long)
+        end
+      end
+      local kept = pandoc.Blocks({})
       if float.attributes["apa-note"] then
         local bn = ""
         if manuscriptmode then
@@ -114,7 +154,38 @@ local processfloat = function(float)
           end
         end
         local npfx = pandoc.Span(pandoc.RawInline("latex", bn .. noteprefix))
-        blocks:insert(utilsapa.make_note(float.attributes["apa-note"], npfx))
+        local note = utilsapa.make_note(float.attributes["apa-note"], npfx)
+        for i, b in ipairs(note.content) do
+          if i > 1 then kept:insert(pandoc.RawBlock("latex", "\\nobreak")) end
+          kept:insert(b)
+        end
+      end
+      local notesetup = "\\setstretch{1}\\setlength{\\parindent}{0pt}" ..
+        "\\clubpenalty=10000 \\widowpenalty=10000 "
+      blocks:insert(pandoc.RawBlock("latex",
+        "\\setbox\\LEScapbox\\vbox{\\hsize\\linewidth\\setstretch{1}\\normalsize\\itshape\\noindent"))
+      blocks:insert(pandoc.Plain(capinl:clone()))
+      blocks:insert(pandoc.RawBlock("latex", "\\par}"))
+      blocks:insert(pandoc.RawBlock("latex", "\\setbox\\LESnotebox\\vbox{\\hsize\\linewidth" .. notesetup))
+      if #kept > 0 then blocks:insert(pandoc.Div(kept:clone())) end
+      blocks:insert(pandoc.RawBlock("latex", "\\par}"))
+      local notein = found and #kept > 0
+      blocks:insert(pandoc.RawBlock("latex",
+        "\\LESneedtable" .. (found and "[\\LTpre]" or "") .. "{" .. nrows .. "}" ..
+        (notein and "\n\\begingroup\\LESnoteintable" or "")))
+      -- Use Quarto's native longtable output (caption + label included)
+      if float.__quarto_custom_node then
+        blocks:insert(float.__quarto_custom_node)
+      else
+        blocks:insert(float.content)
+      end
+      if notein then
+        blocks:insert(pandoc.RawBlock("latex", "\\endgroup\\addvspace{12pt}"))
+      elseif #kept > 0 then
+        -- Append apa-note if present
+        blocks:insert(pandoc.RawBlock("latex", "\\begingroup" .. notesetup))
+        blocks:insert(pandoc.Div(kept))
+        blocks:insert(pandoc.RawBlock("latex", "\\par\\endgroup\\addvspace{12pt}"))
       end
       return pandoc.Div(blocks)
     end

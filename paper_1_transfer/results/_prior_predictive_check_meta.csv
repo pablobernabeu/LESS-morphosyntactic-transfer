@@ -1,0 +1,2 @@
+"model_tag","n_obs","n_participants","n_items","ndraws","chains","iter","warmup","seed","backend","x_min","x_max","abs_q99","abs_max","share_within","brms_version","code_commit"
+"erp_gender_agreement_400_900_midline_itemslope",12908,62,288,100,2,1000,500,20260607,"cmdstanr",-8,8,37.5359652175252,110.363443817219,0.656356523086458,"2.23.0","41383190c97332c9fc7f11ebedaa3a2823b0cec5"

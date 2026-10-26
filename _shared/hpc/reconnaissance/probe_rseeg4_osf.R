@@ -4,7 +4,7 @@
 # Walks OSF node tq7vy, counts the .vhdr files whose names begin "rs-" or "rs_" by
 # top-level (session) folder, and downloads the first such header to print its
 # DataFormat / BinaryFormat / SamplingInterval / NumberOfChannels lines.
-#   Rscript _shared/hpc/reconnaissance/probe_rseeg4_osf.R   (needs network; prints to stdout only)
+#   Rscript _shared/hpc/reconnaissance/probe_rseeg4_osf.R   (needs network, prints to stdout, downloads into tempdir() only)
 #
 # STATUS: superseded reconnaissance, not a pipeline step, and nothing in either paper
 # calls it. No step downloads from OSF: the resting-state recordings are local, in the

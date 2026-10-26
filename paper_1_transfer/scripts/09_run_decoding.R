@@ -46,19 +46,33 @@
 #   cross-validation carries at these sample sizes, Varoquaux, 2018, NeuroImage,
 #   https://doi.org/10.1016/j.neuroimage.2017.06.061). This is the analysis unit for all
 #   decoders here.
-# * NO PEEKING. Any standardisation / class balancing is fit on the TRAIN fold only and
-#   applied to the held-out participant; nothing about the test participant informs the
-#   model (Kriegeskorte et al., 2009, "circular analysis"; Varoquaux et al., 2017).
+# * NO PEEKING. The only quantities estimated from data, the class balancing and the
+#   discriminant itself, are fit on the TRAIN fold only and applied to the held-out
+#   participant; nothing about the test participant informs the model (Kriegeskorte et
+#   al., 2009, "circular analysis"; Varoquaux et al., 2017). There is no feature
+#   standardisation: the channels enter in microvolts as step 08 wrote them.
 # * CLASS BALANCE. Grammatical and ungrammatical counts differ per participant and
 #   decline by session. We balance classes by random undersampling WITHIN the training
 #   set of each fold, and score with AUC, which is insensitive to the decision threshold
 #   and to class prevalence, so neither the fit nor the metric can exploit a
-#   class-prevalence shortcut (Grootswagers et al., 2017; Varoquaux et al., 2017).
+#   class-prevalence shortcut (Grootswagers et al., 2017; Varoquaux et al., 2017). That
+#   holds for the time-course AUC, which is computed within each held-out participant and
+#   then averaged. The cross-language and cross-property AUCs are computed once over a
+#   test set that pools many participants, so a participant's class share and any
+#   participant-level offset in the discriminant score can move them; they are not on the
+#   same prevalence-free footing (see the note above .les_generalize_timepoint()).
 # * CHANCE BY PERMUTATION. The null is built by shuffling the labels WITHIN participant
 #   (preserving per-participant class counts) and re-running the whole LOPO decoder
 #   (>= 1000 permutations; LES_DECODE_NPERM). Comparing observed accuracy to this
 #   empirical null is more valid than the nominal 0.5 when folds/classes are unbalanced
-#   (Combrisson & Jerbi, 2015; Varoquaux et al., 2017).
+#   (Combrisson & Jerbi, 2015; Varoquaux et al., 2017). In the pooled analyses the labels
+#   are exchangeable within participant, not within participant x session: a shuffle can
+#   move a participant's Ungrammatical labels between their sessions. A session x class
+#   imbalance within a participant would therefore be preserved in the data but not in
+#   the null. The design presents the two classes in near-equal numbers in every session,
+#   and the September 2026 audit measured a per-session Ungrammatical share of about
+#   0.49-0.51 (ISSUES.md G08-04), so this departure is small; a test that respected the
+#   session strata would shuffle within participant x session.
 # * MULTIPLE COMPARISONS OVER TIME. Significance over the ~300 time points of the
 #   default 4 ms decoding grid (600 at LES_DECODE_TIME_STEP_MS=2) uses cluster-based
 #   permutation inference: form clusters of temporally contiguous above-threshold
@@ -80,11 +94,21 @@
 # DECLINING N BY SESSION / MISSING PROPERTY-SESSIONS
 # --------------------------------------------------
 # Attrition thins the later sessions and some participant x session cells lack a given
-# property. Every routine (a) drops trials with incomplete patterns, (b) requires each
-# LOPO fold's training set to contain >= 2 participants with BOTH classes, and (c) omits
-# any (session/language/property) cell that cannot be balanced rather than emitting an
-# optimistic score. An omitted cell is simply absent from the output CSV. The by-session
-# skips are announced in the log, whereas the by-session-by-language skips are silent.
+# property. Every routine drops trials with incomplete patterns (.les_complete_trials())
+# and skips a fold or cell that cannot be balanced rather than emitting an optimistic
+# score, but the guards differ by routine:
+#   * the time-course decoder (.les_decode_timepoint()) needs >= 3 participants, a test
+#     participant with both classes, and a training fold with >= 2 participants carrying
+#     BOTH classes and >= 4 balanced rows;
+#   * the temporal-generalisation matrix needs >= 3 participants overall, a test
+#     participant with both classes and a balanced training set of >= 4 rows, but counts
+#     no participants carrying both classes inside a fold;
+#   * the cross-language and cross-property routines (.les_generalize_timepoint()) need
+#     both classes in the training and the test set and a balanced training set of >= 4
+#     rows; run_crosslang() also asks for >= 2 participants per language.
+# An omitted cell or time point is simply absent from (or NA in) the output CSV. The
+# by-session skips are announced in the log, whereas the by-session-by-language skips are
+# silent.
 #
 # USAGE
 #   Rscript 09_run_decoding.R gender_agreement                 # one property, core analyses
@@ -108,18 +132,35 @@ suppressPackageStartupMessages({
 })
 
 # --- Reproducibility / tunables ----------------------------------------------
-# A fixed seed makes the (random) undersampling and label permutations reproducible.
+# A fixed seed makes the (random) undersampling and label permutations reproducible. The
+# literal default is LES_P1_DECODE_SEED_DEFAULT in _config.R, repeated here and in
+# hpc/08_decoding.slurm; test_exclusion_guard.R checks that the three agree.
+#
+# ONE STREAM, SEEDED ONCE. set.seed() below is the only seeding in this file, and every
+# stage draws from that one stream (the undersampler and the label permuter both call
+# sample()) in the order .run() executes them: time-course blocks, then cross-language,
+# then temporal generalisation. The time-course is reproducible block by block because
+# .les_tc_block() caches the RNG state with each block. The cross-language and
+# temporal-generalisation outputs are reproducible only when they run after a complete
+# time-course at the same LES_DECODE_NPERM, as `all` runs them; running either stage on
+# its own, or after a time-course at another B, draws different undersamples (ISSUES.md
+# G08-07). Only the seed, LES_DECODE_NPERM and LES_DECODE_TIME_STEP_MS are recorded,
+# by hpc/08_decoding.slurm in results/_decoding_provenance.csv. LES_DECODE_RIDGE,
+# LES_DECODE_CLUSTER_ALPHA and LES_DECODE_TGM_STRIDE are recorded nowhere and are not in
+# the block-checkpoint fingerprint (.les_tc_fingerprint()), so changing one while
+# checkpoints computed under another value exist would resume those blocks unchanged
+# (ISSUES.md G08-02). Leave them at their defaults for any run that resumes.
 LES_DECODE_SEED   <- as.integer(Sys.getenv("LES_DECODE_SEED", unset = "20260702"))
 # >= 1000 permutations for the chance/cluster null, so the minimum attainable cluster
 # p (1/(nperm+1)) and the tail feeding the Benjamini-Hochberg FDR are stable near
 # alpha (Maris & Oostenveld, 2007; Nichols & Holmes, 2002,
 # https://doi.org/10.1002/hbm.1058). That is the standard. What a given artefact was
 # produced under is carried in its own n_perm column, per row, which the manuscript
-# reads, and it can differ between the confirmatory and exploratory strata while a
-# rerun is in flight (see 09b_assemble_confirmatory_timecourse.R). A reduced count is
-# usable only for the stages that do not run the confirmatory FDR (crosslang, crossprop,
-# temporalgen); run_timecourse() enforces the admissibility guard in
-# .les_fdr_confirmatory(), which stops below roughly m / alpha permutations.
+# reads, and it can differ between blocks of one CSV when the CSV was assembled from
+# block checkpoints of different B (see 09b_assemble_confirmatory_timecourse.R). A
+# reduced count is usable only for the stages that do not run the confirmatory FDR
+# (crosslang, crossprop, temporalgen); run_timecourse() enforces the admissibility guard
+# in .les_fdr_confirmatory(), which stops below roughly m / alpha permutations.
 LES_DECODE_NPERM  <- as.integer(Sys.getenv("LES_DECODE_NPERM", unset = "1000"))
 # Permutations between within-block checkpoints. Block-level checkpointing alone is
 # not enough on this cluster: the pooled "overall" block is ~44% of a property's run
@@ -137,9 +178,13 @@ LES_DECODE_CKPT_EVERY <- as.integer(Sys.getenv("LES_DECODE_CKPT_EVERY", unset = 
 # effects. What controls the false-positive rate is the max-cluster permutation null,
 # not this value.
 LES_DECODE_CLUSTER_ALPHA <- as.numeric(Sys.getenv("LES_DECODE_CLUSTER_ALPHA", unset = "0.05"))
-# Ridge added to the pooled covariance for numerical stability with LES_DECODE_N_EEG
-# (31) channels and thin folds (regularised LDA; standard for high-dimensional EEG
-# decoding).
+# Ridge for the discriminant: .les_lda_fit() adds LES_DECODE_RIDGE x the mean channel
+# variance to every diagonal element of the pooled within-class covariance (a scaled
+# identity, i.e. Tikhonov regularisation), so that the LES_DECODE_N_EEG (31) channel fit
+# stays invertible in thin folds. 1e-3 is a fixed choice: it has been the value since the
+# decoder was first committed (July 2026), it was not tuned on these data, and no
+# published source prescribes it. The manuscript states it as "one thousandth of its mean
+# diagonal".
 LES_DECODE_RIDGE  <- as.numeric(Sys.getenv("LES_DECODE_RIDGE", unset = "1e-3"))
 # Temporal-generalisation coarsening: keep every `stride`-th retained sample on BOTH
 # axes (the TGM is O(nT^2 x folds), so a stride keeps it tractable). 2 by default.
@@ -158,6 +203,15 @@ set.seed(LES_DECODE_SEED)
 # Returns NULL if the ridged pooled covariance is still singular, so the caller can
 # skip that (degenerate) fold rather than emit a spurious score.
 # =============================================================================
+#' Fit the ridge-regularised Fisher discriminant on one training set.
+#' @param Xtr numeric matrix [trial x channel], complete rows only.
+#' @param ytr character vector of labels aligned to the rows of `Xtr`; must contain both
+#'   "Grammatical" and "Ungrammatical" (stops otherwise).
+#' @param ridge numeric scalar, the multiple of the mean channel variance added to the
+#'   diagonal (LES_DECODE_RIDGE by default).
+#' @return list(w = discriminant weights, length ncol(Xtr)), oriented so that a higher
+#'   score means more ungrammatical; NULL when the ridged covariance cannot be solved.
+#' Deterministic: draws nothing from the RNG and touches no global state.
 .les_lda_fit <- function(Xtr, ytr, ridge = LES_DECODE_RIDGE) {
   cls <- unique(as.character(ytr))
   stopifnot(all(c("Grammatical", "Ungrammatical") %in% cls))
@@ -168,8 +222,10 @@ set.seed(LES_DECODE_SEED)
   U <- Xtr[ytr == "Ungrammatical", , drop = FALSE]
   mG <- colMeans(G); mU <- colMeans(U)
   p  <- ncol(Xtr)
-  # Pooled within-class covariance, ridged toward its diagonal for numerical stability
-  # (regularised LDA: essential with this many sensors and thin folds).
+  # Pooled within-class covariance plus a scaled identity: `ridge` x the mean channel
+  # variance on every diagonal element (Tikhonov regularisation, not shrinkage toward the
+  # diagonal). The further 1e-8 keeps the matrix positive definite even when every
+  # channel variance is zero.
   Sw <- (stats::cov(G) * (nrow(G) - 1) + stats::cov(U) * (nrow(U) - 1)) /
         (nrow(G) + nrow(U) - 2)
   Sw <- Sw + diag(ridge * mean(diag(Sw)) + 1e-8, p)
@@ -178,12 +234,24 @@ set.seed(LES_DECODE_SEED)
   list(w = w)
 }
 
+#' Score test patterns with a fitted discriminant.
+#' @param fit list returned by .les_lda_fit().
+#' @param Xte numeric matrix [trial x channel] with the training set's channel order.
+#' @return numeric vector, one score per row of `Xte` (higher = more ungrammatical).
 .les_lda_score <- function(fit, Xte) as.numeric(Xte %*% fit$w)
 
 # =============================================================================
 # AUC (Mann-Whitney U form). Insensitive to the decision threshold and to class
 # prevalence, so chance = 0.5 by construction regardless of the balance of the TEST fold.
+# That holds for scores from ONE test set scored by one fit. Where the test set pools
+# participants (the generalisation routines), participant-level offsets in the score are
+# part of what this AUC ranks.
 # =============================================================================
+#' Area under the ROC curve from scores and binary labels (ties get mid-ranks).
+#' @param score numeric vector of decision scores.
+#' @param y_pos logical vector aligned to `score`, TRUE for the positive class
+#'   (Ungrammatical in every caller).
+#' @return numeric scalar in [0, 1]; NA when either class is absent.
 .les_auc <- function(score, y_pos) {
   # y_pos: logical, TRUE for the positive class. Higher score should mean positive.
   n1 <- sum(y_pos); n0 <- sum(!y_pos)
@@ -200,6 +268,14 @@ set.seed(LES_DECODE_SEED)
 # set relative to another's.
 # Returns row indices into the supplied meta/label vectors.
 # =============================================================================
+#' Undersample the majority class within each participant of a training set.
+#' @param part participant vector of the training rows.
+#' @param y label vector aligned to `part`.
+#' @return integer vector of row indices into `part`/`y`: for every participant with
+#'   both classes, min(n_G, n_U) rows of each class; participants lacking a class are
+#'   dropped.
+#' RNG: draws from the global stream through sample() for every participant whose class
+#' counts differ, so the stream position after a call depends on the data.
 .les_balance_train <- function(part, y) {
   keep <- integer(0)
   for (pp in unique(part)) {
@@ -216,25 +292,40 @@ set.seed(LES_DECODE_SEED)
 }
 
 # =============================================================================
-# One LOPO decoding pass at a SINGLE time point.
-# -----------------------------------------------------------------------------
-# P: [trial x channel] pattern at this time; part: participant vector; y: labels
-# (Grammatical/Ungrammatical). Trains on all-but-one participant (balanced) and scores
-# the held-out participant with AUC; returns the mean AUC over folds (NA if no fold was
-# scorable). If `perm_within_part` is TRUE the labels are first shuffled within each
-# participant (the permutation null).
-# =============================================================================
 # Shuffle grammaticality labels WITHIN each participant (one consistent draw). The null
 # for the cluster test is built by applying ONE such shuffle per permutation and holding
 # it across ALL time points, so each permuted time-course preserves the temporal
 # autocorrelation of the data under H0 and the max-cluster-mass null is calibrated
 # (Maris & Oostenveld, 2007). Shuffling independently at each time point would flatten the
 # null's temporal structure and make the cluster test anti-conservative.
+# =============================================================================
+#' One within-participant permutation of the labels.
+#' @param part participant vector.
+#' @param y label vector aligned to `part`.
+#' @return `y` with its values permuted within each participant (per-participant class
+#'   counts preserved; across sessions, not within participant x session).
+#' RNG: draws once per participant from the global stream.
 .les_perm_labels <- function(part, y) {
   for (pp in unique(part)) { i <- which(part == pp); y[i] <- sample(y[i]) }
   y
 }
 
+# =============================================================================
+# One LOPO decoding pass at a SINGLE time point.
+# -----------------------------------------------------------------------------
+# P: [trial x channel] pattern at this time; part: participant vector; y: labels
+# (Grammatical/Ungrammatical). Trains on all-but-one participant (balanced) and scores
+# the held-out participant with AUC; returns the mean AUC over folds (NA if no fold was
+# scorable). The permutation null calls it with labels already shuffled by
+# .les_perm_labels(); it does no shuffling of its own.
+# =============================================================================
+#' Leave-one-participant-out decoding AUC at one time point.
+#' @param P numeric matrix [trial x channel], the pattern at this time point.
+#' @param part participant vector aligned to the rows of `P`.
+#' @param y label vector aligned to the rows of `P` (observed or permuted).
+#' @return numeric scalar: the mean over scorable folds of the held-out participant's
+#'   AUC; NA when fewer than 3 participants remain or no fold is scorable.
+#' RNG: draws from the global stream through .les_balance_train() in every fold.
 .les_decode_timepoint <- function(P, part, y) {
   ok <- stats::complete.cases(P)
   P <- P[ok, , drop = FALSE]; part <- part[ok]; y <- y[ok]
@@ -271,6 +362,17 @@ set.seed(LES_DECODE_SEED)
 # each cluster's mass and cluster-level p (mass vs the max-cluster null distribution).
 # The cluster-forming threshold is the (1 - alpha) quantile of the pooled null AUC.
 # =============================================================================
+#' Cluster-based permutation test of one decoding time-course.
+#' @param obs numeric vector, observed AUC per time point (NA where unscorable).
+#' @param null numeric matrix [permutation x time point] of permuted AUCs.
+#' @param alpha numeric scalar: forming quantile 1 - alpha and cluster-level criterion
+#'   (LES_DECODE_CLUSTER_ALPHA by default).
+#' @return list: threshold (scalar), p_point (per time point), sig (logical per time
+#'   point, cluster p < alpha), cluster_p and cluster_id (per time point, NA outside a
+#'   cluster; ids restart at 1 in every call).
+#' p_point is NA where obs[t] is NA (an unscorable time point), and a permutation whose AUC
+#' is NA at t is left out of that time point's count and denominator (ISSUES.md G08-06).
+#' No reported quantity reads p_pointwise. Deterministic: draws nothing from the RNG.
 .les_cluster_perm <- function(obs, null, alpha = LES_DECODE_CLUSTER_ALPHA) {
   nT <- length(obs)
   thr <- stats::quantile(as.numeric(null), probs = 1 - alpha, na.rm = TRUE)
@@ -286,8 +388,12 @@ set.seed(LES_DECODE_SEED)
   # confirmatory clusters below, where a systematically understated p propagates.
   # The floor is therefore 1 / (m + 1), which the manuscript reports as the resolution
   # limit on near-threshold cluster p-values.
+  # An unscorable time point has no p: counting nothing against it would give it the floor,
+  # the strongest evidence possible (ISSUES.md G08-06).
   p_point <- vapply(seq_len(nT), function(t) {
-    (1 + sum(null[, t] >= obs[t], na.rm = TRUE)) / (nrow(null) + 1)
+    if (is.na(obs[t])) return(NA_real_)
+    ok <- !is.na(null[, t])
+    (1 + sum(null[ok, t] >= obs[t])) / (sum(ok) + 1)
   }, numeric(1))
 
   # Cluster statistic = summed (AUC - threshold) over contiguous supra-threshold runs.
@@ -350,11 +456,19 @@ set.seed(LES_DECODE_SEED)
 #
 # We therefore fix the FAMILY rather than the correction. The CONFIRMATORY family is
 # the overall (all-sessions-pooled) time-course, one per property. Across properties
-# these rest on disjoint trial sets, so the family is well defined and its dependence
-# structure benign; within a property the time axis is already FWER-controlled. BH is
-# applied across the distinct clusters of the confirmatory analyses (cluster_p is
-# repeated across every time-point row of a cluster, and cluster_id restarts in every
-# cell, so clusters are keyed by analysis + level + cluster_id).
+# these rest on disjoint trial sets, so each family is self-contained. As implemented,
+# this function sees one property's rows at a time (each property's CSV is written
+# separately), so BH runs across the distinct clusters of ONE property's overall
+# time-course and no correction spans the three properties (cluster_p is repeated
+# across every time-point row of a cluster, and cluster_id restarts in every cell, so
+# clusters are keyed by analysis + level + cluster_id).
+#
+# OPEN QUESTION (ISSUES.md G08-05, for the authors to decide). Each cluster_p is already
+# adjusted against the max-cluster null of its time-course, so the `significant` column
+# is a family-wise decision over that time-course on its own. BH applied on top of these
+# adjusted p-values adds no false-positive guarantee and can only remove clusters: on the
+# 4 September 2026 artefacts it removed gender agreement's 614-658 ms cluster
+# (cluster p = .039). Both decisions are written, `significant` and `significant_fdr`.
 #
 # The per-session and per-session-by-language decompositions are retained and reported,
 # but as EXPLORATORY breakdowns of the same trials: each keeps its own cluster-level p
@@ -365,9 +479,19 @@ set.seed(LES_DECODE_SEED)
 # below alpha/m, i.e. 1/(B+1) < alpha/m. Keeping the confirmatory family small keeps
 # this satisfiable: it is why the permutation count and the family size must be chosen
 # together. The guard below fails loudly rather than silently returning a family in
-# which no single cluster could ever be declared significant.
+# which no single cluster could ever be declared significant. At B = 1000 it stops once
+# a property's overall time-course holds 51 or more clusters; the 4 September 2026
+# artefacts held 2, 13 and 16. It runs only after every block is banked, so a stop costs
+# the CSV write, not the permutations.
 LES_DECODE_CONFIRMATORY <- "overall"
 
+#' Label the inference stratum and apply the second-layer BH over confirmatory clusters.
+#' @param res data.frame of time-course rows for ONE property (any mix of blocks), with
+#'   columns analysis, level, cluster_id, cluster_p and n_perm.
+#' @return `res` with three columns added or overwritten: inference ("confirmatory" for
+#'   the overall block, else "exploratory"), cluster_p_fdr (BH-adjusted, confirmatory
+#'   cluster rows only, else NA) and significant_fdr (cluster_p_fdr < alpha).
+#' Stops when the family is inadmissible (see ADMISSIBILITY). Deterministic.
 .les_fdr_confirmatory <- function(res) {
   res$cluster_p_fdr   <- NA_real_
   res$significant_fdr <- FALSE
@@ -407,6 +531,23 @@ LES_DECODE_CONFIRMATORY <- "overall"
 # one row per time point (observed AUC, null mean, pointwise p, cluster p, sig flag).
 # `tag` holds constant descriptor columns (e.g. analysis = "overall").
 # =============================================================================
+#' Observed and permuted LOPO time-course of one block, with its cluster test.
+#' @param X numeric array [trial x channel x time] with time points as dimnames[[3]].
+#' @param meta data.frame aligned to dim 1 of `X`, with participant_lab_ID and
+#'   grammaticality.
+#' @param nperm integer, number of permutations B (LES_DECODE_NPERM).
+#' @param tag named list of constant columns appended to every row (property, analysis,
+#'   level, session, mini_language).
+#' @param part_file path of this block's within-block partial, or NULL for none.
+#' @param fp the block fingerprint a partial must carry to be resumed.
+#' @return data.frame, one row per time point (see the column list in the code), or an
+#'   empty data.frame when the block has one class, < 3 participants or no time points.
+#' RNG and global state: draws from the global stream throughout (undersampling, then
+#' one label shuffle per permutation). On resuming a matching partial it ASSIGNS the
+#' saved .Random.seed in .GlobalEnv, so the resumed stream equals the uninterrupted one.
+#' Files: every LES_DECODE_CKPT_EVERY permutations (except the last) it writes
+#' `part_file` through `<part_file>.tmp` and a rename; it never deletes it
+#' (.les_tc_block() does, once the block is banked).
 .les_decode_timecourse <- function(X, meta, nperm = LES_DECODE_NPERM, tag = list(),
                                    part_file = NULL, fp = NULL) {
   times <- as.numeric(dimnames(X)[[3]]); nT <- length(times)
@@ -449,9 +590,11 @@ LES_DECODE_CONFIRMATORY <- "overall"
       null[b, ] <- vapply(seq_len(nT), function(t)
         .les_decode_timepoint(X[, , t], part, y_perm), numeric(1))
       if (b %% 25 == 0) message(sprintf("    [perm] %d/%d", b, nperm))
-      # Write the partial atomically: a NODE_FAIL during the write itself must not
-      # leave a truncated file that the next run would rightly refuse but that also
-      # destroyed the previous good one.
+      # Write the partial through a temp file and a rename: a NODE_FAIL during the write
+      # itself must not leave a truncated file that the next run would rightly refuse but
+      # that also destroyed the previous good one. Unlike step 08's .les_save_atomic(),
+      # the temp name is fixed rather than process-unique and the rename is not checked,
+      # so two runs of the same block must never overlap (ISSUES.md G08-10).
       if (!is.null(part_file) && b %% LES_DECODE_CKPT_EVERY == 0 && b < nperm) {
         tmp <- paste0(part_file, ".tmp")
         saveRDS(list(null = null, done = b,
@@ -499,7 +642,21 @@ LES_DECODE_CONFIRMATORY <- "overall"
 # positive result could in principle reflect participant-idiosyncratic topography
 # shared across properties within a person rather than a property-general code.
 # Class-balances the training set, scores the whole test set with AUC.
+#
+# NOTE ON THE AUC. The test set is scored once, pooled over every test participant, so
+# this AUC ranks trials of different participants against each other. A participant
+# whose discriminant scores sit higher overall, or whose class share departs from the
+# others', moves it, which the per-participant time-course AUC (scored within each
+# held-out participant, then averaged) is immune to. The two are therefore not on the
+# same footing, and this one is not prevalence-free in the pooled sense (ISSUES.md G08-08).
 # =============================================================================
+#' Train on one set and score another at one time point (cross-language/-property).
+#' @param Ptr,Pte numeric matrices [trial x channel] for the training and test sets.
+#' @param ytr,yte label vectors aligned to `Ptr` and `Pte`.
+#' @param part_tr participant vector aligned to `Ptr` (for the per-participant balance).
+#' @return numeric scalar, the pooled test-set AUC; NA when either set lacks a class,
+#'   the balanced training set has < 4 rows or the fit fails.
+#' RNG: draws from the global stream through .les_balance_train().
 .les_generalize_timepoint <- function(Ptr, ytr, part_tr, Pte, yte) {
   ok_tr <- stats::complete.cases(Ptr); ok_te <- stats::complete.cases(Pte)
   Ptr <- Ptr[ok_tr, , drop = FALSE]; ytr <- ytr[ok_tr]; part_tr <- part_tr[ok_tr]
@@ -518,6 +675,13 @@ LES_DECODE_CONFIRMATORY <- "overall"
 # Pooled decoder (all trials), LOPO across participants; the [t x t'] AUC is averaged
 # over folds. Time is coarsened (`stride`) to keep the t x t x fold grid tractable.
 # =============================================================================
+#' Leave-one-participant-out temporal-generalisation matrix.
+#' @param X numeric array [trial x channel x time] with time points as dimnames[[3]].
+#' @param meta data.frame aligned to dim 1 of `X`.
+#' @param stride integer, keep every stride-th time point on both axes.
+#' @return data.frame with train_time_ms, test_time_ms, auc (mean over folds, NA where
+#'   no fold scored) and n_folds; empty when fewer than 3 participants.
+#' RNG: draws from the global stream through .les_balance_train() once per fold.
 .les_temporal_generalization <- function(X, meta, stride = 2L) {
   times <- as.numeric(dimnames(X)[[3]]); nT <- length(times)
   keep_t <- seq(1L, nT, by = stride)
@@ -566,6 +730,12 @@ LES_DECODE_CONFIRMATORY <- "overall"
 # =============================================================================
 # Loaders and per-property drivers
 # =============================================================================
+#' Read one property's decoding tensor as step 08 wrote it.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @return the list step 08 saved (X, meta, channels, times, property, time_step_ms,
+#'   baseline_corrected, x_digest); stops when the file is missing. Reads
+#'   les_decode_rds(property), which carries the _exclreproc tag under
+#'   LES_P1_EXCLUDE_REPROCESSED=1.
 .les_load_decoding <- function(property) {
   path <- les_decode_rds(property)
   if (!file.exists(path)) stop("Missing decoding tensor: ", path,
@@ -575,6 +745,11 @@ LES_DECODE_CONFIRMATORY <- "overall"
 
 # Drop trials with any incomplete channel-time cell (guards the CV/AUC math). We keep a
 # trial only if every channel-time is observed, so a fold never silently loses samples.
+#' Keep the trials whose every channel x time cell is observed.
+#' @param built the list returned by .les_load_decoding().
+#' @return list(X, meta, channels, times, property, x_digest) restricted to complete
+#'   trials; x_digest is the digest of the FULL tensor as step 08 stored it, not of the
+#'   subset. Deterministic.
 .les_complete_trials <- function(built) {
   X <- built$X
   full <- apply(X, 1, function(m) all(!is.na(m)))
@@ -603,11 +778,23 @@ LES_DECODE_CONFIRMATORY <- "overall"
 # version worth having: an artefact must not depend on how often the scheduler killed the
 # job.
 #
-# STALENESS: a checkpoint is keyed to a fingerprint of the tensor it was computed from and
-# of the tunables that change the numbers. A cache whose fingerprint does not match is
+# STALENESS: a checkpoint is keyed to a fingerprint of the tensor it was computed from
+# (its trial, participant and time counts and, for tensors written since August 2026, a
+# digest of its values), of B and of the seed. A cache whose fingerprint does not match is
 # ignored and recomputed, so re-extracting the tensor or changing B cannot silently produce
-# a mixture of old and new results. To force a clean run, delete
-# data_derived/_tc_ckpt_<property>_*.rds.
+# a mixture of old and new results. The fingerprint does NOT cover LES_DECODE_RIDGE,
+# LES_DECODE_CLUSTER_ALPHA or the code of this script, so a run that changes any of them
+# must start clean (ISSUES.md G08-02). To force a clean run of one property, delete its
+# block checkpoints AND its within-block partials, naming the tag exactly so that the
+# other arm's files survive (a bare `_tc_ckpt_<property>_*` also matches the robustness
+# arm's `_tc_ckpt_<property>_exclreproc_*`):
+#   data_derived/_tc_ckpt_<property><tag>_overall.rds, ..._session_*.rds
+#   data_derived/_tc_part_<property><tag>_overall.rds, ..._session_*.rds
+# where <tag> is empty for the primary analysis and _exclreproc for the robustness arm.
+#' Fingerprint that keys a property's block checkpoints and partials.
+#' @param d the list returned by .les_complete_trials().
+#' @return character scalar "n<trials>_p<participants>_t<times>_B<B>_s<seed>[_x<digest>]";
+#'   warns when the tensor carries no x_digest.
 .les_tc_fingerprint <- function(d) {
   # length(times) already moves when LES_DECODE_TIME_STEP_MS changes, since the step
   # determines how many bins the epoch is divided into, so the step needs no separate
@@ -633,13 +820,29 @@ LES_DECODE_CONFIRMATORY <- "overall"
          })
 }
 
-# Path of the WITHIN-block partial for one analysis, so the permutation loop and the
-# block wrapper agree on where an interrupted null is parked.
+#' Path of the WITHIN-block partial for one analysis, so the permutation loop and the
+#' block wrapper agree on where an interrupted null is parked.
+#' @param property,block property name and block name ("overall", "session_<s>" or
+#'   "session_<s>_<language without punctuation>").
+#' @return path of the block's partial in paper1_derived(), _exclreproc-tagged as needed.
 .les_tc_partfile <- function(property, block)
-  paper1_derived(paste0("_tc_part_", property, "_", block, ".rds"))
+  paper1_derived(paste0("_tc_part_", property, les_p1_exclreproc_tag(), "_", block, ".rds"))
 
+#' Return a block's result from its checkpoint, or compute and bank it.
+#' @param property,block as for .les_tc_partfile().
+#' @param fp the fingerprint from .les_tc_fingerprint(); a checkpoint is used only when
+#'   its stored fingerprint is identical.
+#' @param compute zero-argument function that computes the block (a call of
+#'   .les_decode_timecourse()).
+#' @return the block's data.frame.
+#' RNG and global state: on a checkpoint hit it ASSIGNS the cached .Random.seed in
+#' .GlobalEnv (the state right after the block was first computed); on a miss the
+#' computation draws from the stream as usual.
+#' Files: reads, or writes, paper1_derived("_tc_ckpt_<property><tag>_<block>.rds") as
+#' list(result, rng, fingerprint), written in place by saveRDS(), not through a temp file;
+#' after writing it deletes the block's partial (.les_tc_partfile()).
 .les_tc_block <- function(property, block, fp, compute) {
-  f <- paper1_derived(paste0("_tc_ckpt_", property, "_", block, ".rds"))
+  f <- paper1_derived(paste0("_tc_ckpt_", property, les_p1_exclreproc_tag(), "_", block, ".rds"))
   if (file.exists(f)) {
     ck <- try(readRDS(f), silent = TRUE)
     if (!inherits(ck, "try-error") && identical(ck$fingerprint, fp)) {
@@ -661,6 +864,26 @@ LES_DECODE_CONFIRMATORY <- "overall"
   res
 }
 
+#' Time-course stage for one property: overall, per-session and session x language blocks.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @return invisibly, the path of the CSV written:
+#'   paper1_results("<property><tag>_decoding_timecourse.csv"), one row per time point per
+#'   block, with the inference, cluster_p_fdr and significant_fdr columns of
+#'   .les_fdr_confirmatory().
+#' Reads the tensor (les_decode_rds()); reads and writes the block checkpoints and partials
+#' (.les_tc_block(), .les_tc_partfile()).
+#' RNG and global state: consumes the global stream block by block, and on resuming a
+#' banked block assigns its cached .Random.seed, so the state on return is the same
+#' whether or not any block was resumed. The later stages of .run() draw from that state.
+#' With LES_DECODE_CONFIRMATORY_ONLY=1 it stops after the overall block and writes the CSV
+#' with that block alone, under the same file name; hpc/08_decoding.slurm therefore
+#' allows it only for the robustness arm, whose name carries the _exclreproc tag.
+#' The session x language cells use the two labels "Mini-English" and "Mini-Norwegian"
+#' as written. A trial with any other label enters the overall and per-session blocks but
+#' no session x language cell, without notice; a missing label makes the cell's floor
+#' test NA, so the loop stops with "missing value where TRUE/FALSE needed" after the
+#' earlier blocks are banked (ISSUES.md G08-13).
+#' Stops through .les_fdr_confirmatory() when the confirmatory family is inadmissible.
 run_timecourse <- function(property) {
   d <- .les_complete_trials(.les_load_decoding(property))
   fp <- .les_tc_fingerprint(d)
@@ -673,6 +896,21 @@ run_timecourse <- function(property) {
       d$X, d$meta, tag = list(property = property, analysis = "overall",
                               level = "all", session = NA, mini_language = NA),
       part_file = .les_tc_partfile(property, "overall"), fp = fp))
+
+  # LES_DECODE_CONFIRMATORY_ONLY=1 stops here. The robustness analysis of
+  # docs/eeg_filter_reprocessing_protocol.md (Amendment 5) reruns the confirmatory family
+  # only, which is the overall block, and the session-resolved blocks below are
+  # exploratory, so computing them again for the robustness arm would cost the bulk of a
+  # property's run for rows no comparison reads. The FDR below is computed over the
+  # confirmatory rows whichever blocks are present.
+  if (.les_truthy(Sys.getenv("LES_DECODE_CONFIRMATORY_ONLY", unset = ""))) {
+    message("[decode] ", property, " :: LES_DECODE_CONFIRMATORY_ONLY=1, exploratory blocks skipped")
+    res <- .les_fdr_confirmatory(dplyr::bind_rows(out))
+    path <- paper1_results(paste0(property, les_p1_exclreproc_tag(), "_decoding_timecourse.csv"))
+    les_assert_readonly_data(path); utils::write.csv(res, path, row.names = FALSE)
+    message("[decode] wrote ", basename(path), " (rows=", nrow(res), ")")
+    return(invisible(path))
+  }
 
   # (a) Session-resolved: decode within each session separately (attrition permitting)
   #     to test whether decoding grows across Sessions 2, 3, 4 and 6, so that the
@@ -718,7 +956,7 @@ run_timecourse <- function(property) {
 
   res <- dplyr::bind_rows(out)
   res <- .les_fdr_confirmatory(res)   # cluster_p_fdr / significant_fdr / inference (see above)
-  path <- paper1_results(paste0(property, "_decoding_timecourse.csv"))
+  path <- paper1_results(paste0(property, les_p1_exclreproc_tag(), "_decoding_timecourse.csv"))
   les_assert_readonly_data(path); utils::write.csv(res, path, row.names = FALSE)
   message("[decode] wrote ", basename(path), " (rows=", nrow(res), ")")
   invisible(path)
@@ -729,6 +967,18 @@ run_timecourse <- function(property) {
 # populations are disjoint, generalisation above chance means the grammaticality code is
 # SHARED across the two artificial languages -- a strong, double-dipping-proof transfer
 # signature. Item codes are language-namespaced upstream, so no item leaks between sets.
+# The AUC here is pooled over the test language's participants (see the note above
+# .les_generalize_timepoint()), so it is not directly comparable with the time-course AUC.
+#' Cross-language generalisation stage for one property.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @return invisibly, the path of
+#'   paper1_results("<property><tag>_decoding_generalization.csv"), one row per time point
+#'   per direction (train_set, test_set, time_ms, auc).
+#' RNG: draws from the global stream (undersampling), so its output depends on the
+#' stream state it starts from (see "ONE STREAM, SEEDED ONCE" at the top).
+#' The two languages are the literal labels; trials with another or a missing
+#' mini_language are left out of both sets without notice (which() drops NA; ISSUES.md
+#' G08-13).
 run_crosslang <- function(property) {
   d <- .les_complete_trials(.les_load_decoding(property))
   times <- d$times; nT <- length(times)
@@ -754,7 +1004,7 @@ run_crosslang <- function(property) {
       stringsAsFactors = FALSE)
   }
   res <- dplyr::bind_rows(rows)
-  path <- paper1_results(paste0(property, "_decoding_generalization.csv"))
+  path <- paper1_results(paste0(property, les_p1_exclreproc_tag(), "_decoding_generalization.csv"))
   les_assert_readonly_data(path); utils::write.csv(res, path, row.names = FALSE)
   message("[decode] wrote ", basename(path), " (rows=", nrow(res), ")")
   invisible(path)
@@ -766,6 +1016,12 @@ run_crosslang <- function(property) {
 # response rather than a property-specific one. Needs ALL three tensors, so this runs
 # once (not a per-property array task) and writes one
 # <train_property>_decoding_generalization_crossproperty.csv per train property.
+#' Cross-property generalisation stage (all ordered pairs of the three properties).
+#' @return invisibly TRUE. Reads all three tensors and writes, per training property,
+#'   paper1_results("<property><tag>_decoding_generalization_crossproperty.csv").
+#' Stops when the three tensors share no time point or their channel axes differ.
+#' RNG: draws from the global stream (undersampling); run on its own, it starts from the
+#' freshly seeded stream.
 run_crossprop <- function() {
   props <- names(LES_P1_PROPERTIES)
   built <- setNames(lapply(props, function(p) .les_complete_trials(.les_load_decoding(p))), props)
@@ -805,7 +1061,7 @@ run_crossprop <- function() {
   for (a in props) {
     sub <- res[res$train_set == a, , drop = FALSE]
     if (nrow(sub) == 0) next
-    path <- paper1_results(paste0(a, "_decoding_generalization_crossproperty.csv"))
+    path <- paper1_results(paste0(a, les_p1_exclreproc_tag(), "_decoding_generalization_crossproperty.csv"))
     les_assert_readonly_data(path)
     utils::write.csv(sub, path, row.names = FALSE)
   }
@@ -814,12 +1070,18 @@ run_crossprop <- function() {
 }
 
 # --- (d) temporal generalisation ---------------------------------------------
+#' Temporal-generalisation stage for one property (pooled over sessions, LOPO).
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @return invisibly, the path of
+#'   paper1_results("<property><tag>_decoding_temporal_generalization.csv").
+#' RNG: draws from the global stream (undersampling), so its output depends on the
+#' stream state it starts from (see "ONE STREAM, SEEDED ONCE" at the top).
 run_temporalgen <- function(property) {
   d <- .les_complete_trials(.les_load_decoding(property))
   message("[decode] ", property, " :: temporal generalisation")
   res <- .les_temporal_generalization(d$X, d$meta, stride = LES_DECODE_TGM_STRIDE)
   res$property <- property
-  path <- paper1_results(paste0(property, "_decoding_temporal_generalization.csv"))
+  path <- paper1_results(paste0(property, les_p1_exclreproc_tag(), "_decoding_temporal_generalization.csv"))
   les_assert_readonly_data(path); utils::write.csv(res, path, row.names = FALSE)
   message("[decode] wrote ", basename(path), " (rows=", nrow(res), ")")
   invisible(path)
@@ -828,9 +1090,19 @@ run_temporalgen <- function(property) {
 # =============================================================================
 # Entry point
 # =============================================================================
+#' Command-line entry: Rscript 09_run_decoding.R [property] [stage] (see USAGE).
+#' Runs the requested stages in the fixed order time-course, cross-language, temporal
+#' generalisation, which is the order the shared RNG stream assumes; `crossprop` runs
+#' alone and ignores the property. Stops on an unknown property or stage.
 .run <- function() {
   args  <- commandArgs(trailingOnly = TRUE)
   stage <- if (length(args) >= 2) args[[2]] else "all"
+  # Any other value used to fall through every branch below, so the job ran nothing and
+  # still reported "done" (ISSUES.md G09-03).
+  stages <- c("timecourse", "crosslang", "crossprop", "temporalgen", "all")
+  if (!stage %in% stages)
+    stop("[decode] unknown analysis stage '", stage, "'; expected one of ",
+         paste(stages, collapse = ", "), call. = FALSE)
 
   if (stage == "crossprop") {                 # needs all three tensors; property-free
     run_crossprop(); message("[decode] done."); return(invisible())

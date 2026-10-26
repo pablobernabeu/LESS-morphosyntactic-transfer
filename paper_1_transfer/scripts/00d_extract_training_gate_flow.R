@@ -3,13 +3,13 @@
 #
 # PURPOSE
 # -------
-# The pre-registered design gates each training session behind a post-training
-# comprehension test: a participant had to score > 80% to proceed, and was given
-# a SECOND attempt (after re-training) if the first attempt failed. This >80% gate
-# is a NON-RANDOM missingness mechanism (participants who never passed drop out of
-# later sessions), which both manuscripts need to describe. This script
-# reconstructs the gate flow per session from the OpenSesame lab-session logs and
-# writes a machine-readable summary to BOTH papers' results/ folders.
+# The pre-registered design used an >80% post-training comprehension threshold on
+# the first attempt. A participant who failed retrained and took a second test, then
+# proceeded to the experiment regardless of that score. This script reconstructs
+# the attempt outcomes from the OpenSesame lab-session logs and writes an audit
+# table to BOTH papers' results/ folders. Neither manuscript reports the table: its
+# counts do not reconcile with Session-4 attendance and must not be treated as an
+# attrition mechanism.
 #
 # SOURCE & KEY FIELDS
 # -------------------
@@ -69,9 +69,12 @@
 # files within a session, taking the gate signal from the file(s) that have it.
 # The transient '*.filepart' (an incomplete download) is ignored.
 #
-# Two Session-4 logs (participants 3 and 5) were exported with a SEMICOLON delimiter,
-# where every other logfile in the study is comma-delimited. The comma-delimited reader
-# below returns a single unnamed column for them, so neither test_passed nor the
+# Two Session-4 logs (participants 3 and 5) were re-saved by hand in a spreadsheet after
+# the session: they are semicolon-delimited and unquoted, and their opensesame_version
+# field reads 03.03.2014 where OpenSesame wrote 3.3.14 in every other log, whereas every
+# other logfile in the study is the comma-delimited, quoted file OpenSesame wrote. The
+# original exports are not in the repository (ISSUES.md, X5-03). The comma-delimited
+# reader below returns a single unnamed column for them, so neither test_passed nor the
 # judgement column is found, they are classified 'no_data', and they drop out of the
 # Session-4 counts altogether. Session 4 has data for 56 subjects, but n_attempted
 # reports 54. Sniffing the delimiter per file would change the reported counts, so the
@@ -98,14 +101,20 @@ if (!exists("data_path"))             source(here::here("_shared", "R", "00_path
 if (!exists("behavioural_lab_path"))  source(here::here("_shared", "R", "03_data_manifest.R"))
 
 GATE_THRESHOLD_PCT <- 80         # pre-registered pass mark (> 80%)
-# The sessions reconstructed are the ERP sessions, LES_ERP_SESSIONS in the manifest.
+# The sessions reconstructed are the ERP sessions, LES_ERP_SESSIONS in the manifest. The
+# training sessions carry the post-training test; the last ERP session is the retention
+# session, which has none (see WHAT CAN AND CANNOT BE RECONSTRUCTED).
+GATED_SESSIONS <- utils::head(LES_ERP_SESSIONS, -1L)   # Sessions 2, 3 and 4
 
-# --- Helper: extract the gate signal from ONE csv ----------------------------
-# Returns a one-row tibble: subject, has_test (any scored grammaticality judgements
-# present, whichever block they came from), and the ordered-unique test_passed
-# transition string ("yes", "no->yes", "no", or NA when the file records no gate
-# outcome). A file the reader cannot parse yields has_test = FALSE and tp_seq = NA,
-# which classify_gate() reports as "no_data".
+#' Gate signal of one OpenSesame logfile
+#'
+#' @param path Path of one subject-*.csv logfile.
+#' @return A one-row tibble: subject (integer, from the file name), has_test (any scored
+#'   grammaticality judgements present, whichever block they came from), tp_seq (the
+#'   run-length sequence of the test_passed values in row order: "yes", "no->yes", "no",
+#'   or NA when the file records no gate outcome) and has_tp_column (whether the file has
+#'   a test_passed column at all). A file the reader cannot parse yields has_test = FALSE,
+#'   tp_seq = NA and has_tp_column = FALSE, which classify_gate() reports as "no_data".
 read_gate_signal <- function(path) {
   df <- tryCatch(
     suppressWarnings(suppressMessages(
@@ -115,7 +124,8 @@ read_gate_signal <- function(path) {
   )
   subj <- suppressWarnings(as.integer(str_extract(basename(path), "\\d+")))
   if (is.null(df)) {
-    return(tibble(subject = subj, has_test = FALSE, tp_seq = NA_character_))
+    return(tibble(subject = subj, has_test = FALSE, tp_seq = NA_character_,
+                  has_tp_column = FALSE))
   }
 
   # Terminal gate flag, read in row order, collapsed to its run-length sequence.
@@ -135,14 +145,24 @@ read_gate_signal <- function(path) {
     has_test <- any(!is.na(j) & j != "")
   }
 
-  tibble(subject = subj, has_test = has_test, tp_seq = tp_seq)
+  tibble(subject = subj, has_test = has_test, tp_seq = tp_seq,
+         has_tp_column = "test_passed" %in% names(df))
 }
 
-# --- Helper: classify one subject's pooled gate sequence ---------------------
-# Given the set of test_passed sequences from all of a subject's files in a
-# session, return the gate outcome. We take the single most informative signal:
-# a file that reached a pass ("...->yes" or "yes") dominates a file that only
-# recorded a fail, because the pass is the later, terminal event.
+#' Gate outcome of one subject in one session, pooled over the subject's files
+#'
+#' We take the single most informative signal: a file that reached a pass ("...->yes" or
+#' "yes") dominates a file that only recorded a fail, because the pass is the later,
+#' terminal event.
+#'
+#' @param tp_seqs Character vector, the tp_seq of each of the subject's files in the
+#'   session (NA where a file records no outcome).
+#' @param any_test Logical scalar, whether any of those files holds scored judgements.
+#' @return One of five labels, by precedence: "passed_attempt2" (a sequence ending in
+#'   "yes" after a "no"), "passed_attempt1" (a "yes" alone), "failed_gate" ("no" alone),
+#'   "completed_test_no_gate" (scored judgements but no recorded outcome), and "no_data"
+#'   (neither). Any other recorded sequence also falls through to
+#'   "completed_test_no_gate", so an unexpected value is never read as a pass or a fail.
 classify_gate <- function(tp_seqs, any_test) {
   seqs <- tp_seqs[!is.na(tp_seqs)]
   if (length(seqs) == 0) {
@@ -159,7 +179,14 @@ classify_gate <- function(tp_seqs, any_test) {
   "completed_test_no_gate"
 }
 
-# --- Reconstruct per session --------------------------------------------------
+#' Gate counts of one session
+#'
+#' @param sess Session number, one of LES_ERP_SESSIONS.
+#' @return A one-row tibble with the columns of the written table (see OUTPUT).
+#' @details Reads every subject-*.csv logfile of the session (behavioural_lab_path()),
+#'   pooling a subject's files. Stops when no logfile of a training session
+#'   (GATED_SESSIONS) has a test_passed column, because a renamed or missing flag would
+#'   otherwise write that session up as a gate-free retention session with no error.
 session_flow <- function(sess) {
   dir <- behavioural_lab_path(paste0("Session ", sess))
   files <- list.files(dir, pattern = "^subject-.*\\.csv$", full.names = TRUE)
@@ -168,6 +195,11 @@ session_flow <- function(sess) {
 
   sig <- bind_rows(lapply(files, read_gate_signal)) %>%
     filter(!is.na(subject))
+  if (sess %in% GATED_SESSIONS && !any(sig$has_tp_column)) {
+    stop("[00d] no Session-", sess, " logfile has a test_passed column; the gate flag ",
+         "may have been renamed. Check the logs before reading this session as gate-free.",
+         call. = FALSE)
+  }
 
   # Pool a subject's files (handles split test/experiment logs).
   per_subject <- sig %>%

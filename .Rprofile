@@ -10,8 +10,10 @@
 # until renv::restore() has actually built the project one.
 #
 # The renv cache is deliberately not set here. It belongs outside the working copy and is a
-# per-machine choice: on the cluster set it in _shared/hpc/arc_env.sh, for instance
-# export RENV_PATHS_CACHE="${LES_BASE}/renv-cache", because $HOME there is quota-limited.
+# per-machine choice. On the cluster, the restore job switches it off. renv's default cache
+# sits under $HOME, which is quota-limited there, so _shared/hpc/00_restore_environment.slurm
+# exports RENV_CONFIG_CACHE_ENABLED=FALSE and the restore installs plain copies into the
+# library.
 # The relative path this file used to set resolved against whatever directory R happened to
 # start in, so the cache landed inside the working copy rather than beside it.
 if (file.exists("renv/activate.R") &&

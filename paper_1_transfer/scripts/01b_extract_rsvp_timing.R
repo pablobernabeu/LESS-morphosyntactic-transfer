@@ -60,7 +60,8 @@
 #   * 02 reads only ^subject-\d+\.csv$; here the split "-test"/"-experiment"
 #     files are timing evidence like any other log, so all *.csv are read.
 #   * 02 fixes the delimiter to a comma, silently dropping the two Session-4
-#     logs (participants 3 and 5) that were exported semicolon-delimited; a
+#     logs (participants 3 and 5) that were re-saved by hand in a spreadsheet,
+#     which left them semicolon-delimited and unquoted (ISSUES.md, X5-03); a
 #     timing census must not lose 864 trials to a delimiter, so the separator
 #     is sniffed from each file's header line. Neither choice writes anything
 #     back, so the modelled datasets are unaffected.
@@ -76,14 +77,20 @@
 #   * offsets time_word{j} - time_word{cp} for all j > cp (cp = 3 or 4), of
 #     which those in (0, 900] are counted, and
 #   * the first subsequent onset latency, whose min/median/max are reported.
+# A row with fewer than two displayed words, or with no word after the critical one,
+# is counted under no_following_word, and one with a missing onset under
+# missing_onset, so every row that reaches the loop is either counted or tallied.
 # Session 2's locative filler sentences log no target word and are excluded by
 # the target_word_location filter, exactly as in the original computation.
 #
 # The raw logs carry a known blemish that the original computation did not
 # remove and this script therefore keeps, counting it separately: a minority of
-# files close by re-writing their final trial row verbatim, so a handful of
-# critical-word rows are session-close duplicates. n_duplicate_rows reports how
-# many of the counted trials are such byte-identical repeats.
+# files close by re-logging their final trial at session close. n_duplicate_rows
+# counts the counted trials that repeat another row's file, trial number and
+# critical-word onset. In practice that is the final row of 107 logfiles, re-logged
+# with its response, accuracy and session-end timing fields rewritten, so the
+# repeats are not byte-identical; their onsets, which are all this census reads,
+# are the same.
 #
 # NOTE ON THE MEDIAN
 # ------------------
@@ -120,9 +127,13 @@ suppressPackageStartupMessages({
 .les_dur_cols   <- paste0("word", 1:10, "_duration")
 .les_onset_cols <- paste0("time_word", 1:10)
 
-# --- Read one logfile with its delimiter sniffed from the header line ---------
-# Two Session-4 exports are semicolon-delimited (see header); everything else is
-# comma-delimited. Sniffing keeps both without touching any other pipeline.
+#' Read one logfile with its delimiter sniffed from the header line
+#'
+#' Two Session-4 logs, re-saved by hand, are semicolon-delimited (see header); everything
+#' else is comma-delimited. Sniffing keeps both without touching any other pipeline.
+#' @param file Path of one OpenSesame logfile.
+#' @return Its rows, every column as character, restricted to session_part,
+#'   target_word_location, trial and the word, duration and onset columns it has.
 .read_one_logfile <- function(file) {
   header <- readLines(file, n = 1L, warn = FALSE)
   n_semi  <- lengths(regmatches(header, gregexpr(";", header, fixed = TRUE)))
@@ -142,6 +153,19 @@ suppressPackageStartupMessages({
 # =============================================================================
 # Walk every critical-word trial and collect the post-critical onset offsets
 # =============================================================================
+
+#' The RSVP timing census over every critical-word trial in the raw logs
+#'
+#' Takes no arguments. Reads every *.csv logfile of the sessions in LES_ERP_SESSIONS
+#' (behavioural_lab_path()); writes nothing.
+#' @return A named list of 16 fields: the scalars n_trials, next_onset_min_ms,
+#'   next_onset_max_ms, next_onset_median_ms, max_onsets_within_900ms,
+#'   min_onsets_within_900ms, n_trials_exactly_one_onset_within_900ms,
+#'   second_onset_min_ms, n_duplicate_rows and n_files_read; n_trials_by_session, a table
+#'   of counted trials by session; skipped_files, the base names of logs without the
+#'   needed columns; n_rows_excluded, a named integer vector of the exclusion tallies; and
+#'   the provenance strings source_dir, window_rule and generated_utc (the wall-clock time
+#'   of the run).
 build_rsvp_timing <- function() {
 
   sessions <- LES_ERP_SESSIONS                       # c(2, 3, 4, 6)
@@ -196,11 +220,13 @@ build_rsvp_timing <- function() {
 
     for (i in seq_len(n_i)) {
       # Number of displayed words: stop at the first empty word slot (matches
-      # the original computation; trailing content after a gap is ignored).
+      # the original computation; trailing content after a gap is ignored). A row with
+      # fewer than two words falls through to the tallies below (seq_len(0) is empty, and
+      # cp >= n_words then holds), so it is counted as an exclusion, never dropped
+      # silently (ISSUES.md, G05-11).
       present <- !is.na(W[i, ]) & trimws(W[i, ]) != ""
       first_gap <- match(FALSE, present)
       n_words <- if (is.na(first_gap)) 10L else first_gap - 1L
-      if (n_words < 2L) next
 
       ons <- O[i, seq_len(n_words)]
       if (anyNA(ons)) { excl["missing_onset"] <- excl["missing_onset"] + 1L; next }
@@ -256,9 +282,14 @@ build_rsvp_timing <- function() {
   )
 }
 
-# --- The census as one row, for results/_rsvp_timing.csv ----------------------
-# Every scalar field keeps its name. The per-session table becomes n_trials_s<session>,
-# the exclusion tallies n_rows_excluded_<reason>, and the skipped-file list its length.
+#' The census as one row, for results/_rsvp_timing.csv
+#'
+#' Every scalar field keeps its name. The per-session table becomes n_trials_s<session>,
+#' the exclusion tallies n_rows_excluded_<reason>, and the skipped-file list its length.
+#' generated_utc is a wall-clock stamp, so two runs on identical inputs differ in that
+#' column only; a rebuild-and-compare check should leave it out (ISSUES.md, X3-05).
+#' @param timing The list build_rsvp_timing() returns.
+#' @return A one-row data frame.
 .les_rsvp_timing_row <- function(timing) {
   row <- list()
   for (nm in names(timing)) {
@@ -279,6 +310,8 @@ build_rsvp_timing <- function() {
 # =============================================================================
 # Entry point
 # =============================================================================
+# Writes paper1_derived("rsvp_timing_overlap.rds") and paper1_results("_rsvp_timing.csv"),
+# each through les_assert_readonly_data(), and reports the census.
 .run <- function() {
   timing <- build_rsvp_timing()
 

@@ -3966,6 +3966,17 @@
       "Maintainer": "Tal Galili <tal.galili@gmail.com>",
       "Repository": "CRAN"
     },
+    "depictr": {
+      "Package": "depictr",
+      "Version": "0.3.0",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "pablobernabeu",
+      "RemoteRepo": "depictr",
+      "RemoteRef": "v0.3.0",
+      "RemoteSha": "8b5f71063393c8a5f9bb4bf063b1c8162523605d"
+    },
     "desc": {
       "Package": "desc",
       "Version": "1.4.3",
@@ -13601,6 +13612,17 @@
       "Author": "Hadley Wickham [aut], Thomas Lin Pedersen [cre, aut] (<https://orcid.org/0000-0002-5147-4711>), Dana Seidel [aut], Posit Software, PBC [cph, fnd] (03wc8by49)",
       "Maintainer": "Thomas Lin Pedersen <thomas.pedersen@posit.co>",
       "Repository": "CRAN"
+    },
+    "scopusflow": {
+      "Package": "scopusflow",
+      "Version": "0.4.0",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "pablobernabeu",
+      "RemoteRepo": "scopusflow",
+      "RemoteRef": "v0.4.0",
+      "RemoteSha": "623649a2f4812da1a4850bf2c58d4fac4fc771f3"
     },
     "see": {
       "Package": "see",

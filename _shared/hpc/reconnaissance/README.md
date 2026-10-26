@@ -12,20 +12,24 @@ holds only the environment script and the checks that run against it.
 
 ## Data, dependencies, reproducibility
 
-Every one of these scripts prints to stdout and writes no file. Each reads either the
-study's own resting-state exports under
+Every one of these scripts prints to stdout. Each reads either the study's own
+resting-state exports under
 `data/raw data/EEG/Session 2/Export/<ppt>_RS_eyes_{closed,open}.{txt,vhdr}`, or the OSF
-project `tq7vy` over the network. Run one, if you want to, with the cluster environment
-sourced first:
+project `tq7vy` over the network. The three that query OSF also download BrainVision
+header and marker files, and in `probe_rseeg2.R` a session logbook, into R's session
+`tempdir()`. None of the six writes anything else. Run one, if you want to, with the
+cluster environment sourced first:
 
 ```bash
 source _shared/hpc/arc_env.sh
 Rscript _shared/hpc/reconnaissance/probe_rseeg5.R
 ```
 
-`probe_rseeg2.R` and `probe_rseeg4_osf.R` need outbound network access. The rest read
-local files only. Each carries a STATUS note in its header saying what it settled and
-what superseded it.
+`probe_rseeg.R`, `probe_rseeg2.R` and `probe_rseeg4_osf.R` need outbound network access.
+The rest read local files only. Those three also load `osfr`, which
+`_shared/install_bayesian_dependencies.R` does not install and the `renv.lock` restore
+(`_shared/hpc/00_restore_environment.slurm`) does. Each carries a STATUS note in its
+header saying what it settled and what superseded it.
 
 ## What each one settled
 

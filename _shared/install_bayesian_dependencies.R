@@ -1,9 +1,9 @@
 # =============================================================================
 # install_bayesian_dependencies.R
 # -----------------------------------------------------------------------------
-# Extends HPC scripts/check_and_install_packages.R with everything the two
-# Bayesian manuscripts need (brms + Stan toolchain, posterior tooling, the
-# resting-state EEG stack for Paper 2, papaja and Quarto).
+# Installs what the two papers' cluster stages load: brms and the Stan toolchain, the
+# posterior tooling, projpred for Paper 2's variable selection, the data-handling stack,
+# eegUtils and papaja.
 # Run ONCE on the cluster to BOOTSTRAP a library where none exists. It is not the way to
 # reproduce the environment the reported fits ran in: it pins nothing, resolving against
 # whatever CRAN ships on the day, and install_if_missing() keeps whatever version is
@@ -15,17 +15,18 @@
 #   source _shared/hpc/arc_env.sh
 #   Rscript --vanilla -e 'renv::restore(lockfile = "renv.lock", library = .libPaths(),
 #                                       prompt = FALSE)'        # R packages, exact versions
-#   Rscript --vanilla -e 'cmdstanr::install_cmdstan(version = "2.39.0",
+#   Rscript --vanilla -e 'cmdstanr::install_cmdstan(version = Sys.getenv("LES_CMDSTAN_VERSION"),
 #                                                   dir = Sys.getenv("CMDSTAN_INSTALL_DIR"))'
 #
-# The lockfile and the library are named explicitly because the cluster code root carries
-# neither renv.lock nor a .Rprofile (HPC_RUNBOOK.md, section 0), so renv is never activated
-# there. The last line is deliberately not the 00_install_dependencies.slurm job: that job
-# runs this script, whose install_cmdstan() call carries no version= and would take whatever
-# release is current. What renv cannot restore at all is CmdStan, the GCC toolchain and the
-# CXXFLAGS_OPTIM = -O1 pin, none of which is an R package. Those are set by
-# _shared/hpc/arc_env.sh, and the CmdStan version a run used is recorded in
-# results/_provenance.csv. Take any fresh snapshot with
+# with LES_CMDSTAN_VERSION set to LES_CMDSTAN_RECORD, the CmdStan version of record that
+# arc_env.sh defines. The lockfile and the library are named explicitly because the
+# cluster code root carries neither renv.lock nor a .Rprofile (HPC_RUNBOOK.md, section 0),
+# so renv is never activated there. The last line is deliberately not the
+# 00_install_dependencies.slurm job: that job runs this script, whose install_cmdstan()
+# call carries no version= and would take whatever release is current. What renv cannot
+# restore at all is CmdStan, the GCC toolchain and the CXXFLAGS_OPTIM = -O1 pin, none of
+# which is an R package. Those are set by _shared/hpc/arc_env.sh, and the CmdStan version a
+# run used is recorded in results/_provenance.csv. Take any fresh snapshot with
 # the R module loaded and `library = .libPaths()`, so the module's own bundled library is
 # captured alongside R_LIBS_USER; a snapshot of R_LIBS_USER alone omits about a fifth of
 # the environment. The status table this script prints at the end is a convenience log,
@@ -51,28 +52,41 @@ cat("R version:", R.version.string, "\n\n")
 repos <- "https://cloud.r-project.org/"
 
 # --- CRAN packages -----------------------------------------------------------
+# The list holds what the scripts run on the cluster load, so that a bootstrapped library
+# can run every stage. Packages used only where the manuscripts are rendered (ggtext,
+# patchwork and the quarto R package; the Quarto CLI does the rendering) or only by the
+# legacy lmerTest analyses under analyses/ are left out. renv.lock still pins all of them,
+# because it was snapshotted from a library that held them.
 required_packages <- c(
   # --- reproducibility / paths ---
   "here",            # project-anchored paths (Marwick et al., 2018)
   "renv",            # environment lockfile
+  "digest",          # the checksums behind the EEG overlay check, the decoding tensor
+                     #   fingerprint and Paper 2's fit identities; those stages stop
+                     #   without it
   # --- Bayesian modelling ---
   "brms",            # Bayesian multilevel models (Bürkner, 2017, JSS 80:1)
   "posterior",       # rank-normalised Rhat / ESS (Vehtari et al., 2021)
   "bayesplot",       # posterior predictive checks (Gabry et al., 2019)
   "loo",             # PSIS-LOO model checking (Vehtari, Gelman & Gabry, 2017)
-  # --- data wrangling / plotting (used by legacy + new code) ---
+  "projpred",        # projection predictive variable selection, Paper 2's steps 08
+                     #   and 09 (Piironen, Paasiniemi & Vehtari, 2020)
+  # --- data wrangling / plotting ---
+  # purrr is not loaded by the vendored importer, but its version is part of the decoding
+  # tensor's fingerprint (08_extract_decoding_matrices.R) and the legacy single-trial
+  # loader under data/R_functions/ attaches it. tidyr imports purrr and ggplot2 imports
+  # scales in any case.
   "dplyr", "tidyr", "stringr", "readr", "readxl", "data.table", "purrr",
-  "ggplot2", "ggtext", "scales", "patchwork",
+  "ggplot2", "scales",
   # --- resting-state EEG (Paper 2) ---
   # (eegUtils is NOT on CRAN for current R; installed from R-universe below. No OSF
   # client is needed: the recordings are local and no pipeline step downloads anything,
   # see paper_2_plasticity/scripts/03_extract_resting_state_eeg.R.)
   # --- manuscripts ---
-  "papaja",          # the apa_num/apa_p number formatters used by the .qmd files
+  "papaja"           # the apa_num number formatter used in the manuscripts
                      #   (Aust & Barth). The manuscripts themselves are built with
-                     #   apaquarto, and the .qmd carry base-R fallbacks for these two
-                     #   helpers, so papaja is optional
-  "quarto"           # render the .qmd documents
+                     #   apaquarto, and _shared/R/06_manuscript_helpers.R carries a
+                     #   base-R fallback, so papaja is optional
 )
 
 # --- Optional tooling, not installed by this script ---------------------------
@@ -89,17 +103,26 @@ required_packages <- c(
 
 # --- install one CRAN package if it is not already there ---------------------
 # Reports the version when the package is present, so the log doubles as a record of
-# what the run found. A failed install is reported and does not abort the rest.
+# what the run found. A failed install does not abort the rest. install.packages()
+# signals most failures as warnings rather than errors, so success is judged by whether
+# the package loads afterwards, and a failure prints a FAIL line either way.
 install_if_missing <- function(pkg) {
   if (requireNamespace(pkg, quietly = TRUE)) {
     cat(sprintf("OK   %-16s %s\n", pkg, as.character(packageVersion(pkg))))
     return(invisible(TRUE))
   }
   cat(sprintf("..   installing %s\n", pkg))
-  tryCatch(
-    install.packages(pkg, repos = repos, dependencies = TRUE),
-    error = function(e) cat(sprintf("FAIL %-16s %s\n", pkg, conditionMessage(e)))
-  )
+  msg <- tryCatch({
+    install.packages(pkg, repos = repos, dependencies = TRUE)
+    NULL
+  }, error = function(e) conditionMessage(e))
+  ok <- requireNamespace(pkg, quietly = TRUE)
+  if (!ok) {
+    cat(sprintf("FAIL %-16s %s\n", pkg,
+                if (is.null(msg)) "not loadable after install.packages(); see the warnings above"
+                else msg))
+  }
+  invisible(ok)
 }
 
 invisible(lapply(required_packages, install_if_missing))
@@ -181,6 +204,7 @@ cat("\nNext: on the CLUSTER, and only there, run\n",
     "  Rscript --vanilla -e 'renv::snapshot(library = .libPaths(), type = \"all\", prompt = FALSE)'\n",
     "That writes renv.lock into the cluster code root, not into the repository, so copy it\n",
     "back to the working copy (from the dev box: scp arc:new_LESS/renv.lock renv.lock) and\n",
-    "commit it. Without that step the lockfile in the repository stays stale. Never snapshot\n",
-    "from the render box: it has no projpred or eegUtils and would replace the lockfile with\n",
-    "a partial one.\n", sep = "")
+    "commit it, after re-applying the two hand edits the root README's 'Package sources'\n",
+    "section describes. Without that step the lockfile in the repository stays stale. Never\n",
+    "snapshot from the render box: it has no projpred or eegUtils and would replace the\n",
+    "lockfile with a partial one.\n", sep = "")

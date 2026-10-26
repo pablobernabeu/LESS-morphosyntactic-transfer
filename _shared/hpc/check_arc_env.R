@@ -7,7 +7,8 @@
 #
 # Read the lines, not only the verdict. The closing PASS/FAIL covers the Stan compile
 # alone. The path and package lines above it are printed for the reader and do not feed
-# into it, so a run with a missing data tree can still end in PASS.
+# into it, so a run with a missing data tree can still end in PASS. A FAIL ends the script
+# with exit status 1, so rebuild_cmdstan.slurm, which runs under errexit, fails with it.
 #
 # Run it by hand, or through _shared/hpc/rebuild_cmdstan.slurm, which calls it after
 # rebuilding CmdStan. Prefer a compute node: the Stan compile is memory-hungry and
@@ -21,6 +22,7 @@ suppressMessages({
   source(file.path(.codeRoot, "_shared", "R", "03_data_manifest.R"))  # participant_key_csv(), etc.
 })
 ok <- TRUE
+# Prints one "label  value" line, the label padded so the values line up; returns NULL.
 say <- function(label, val) cat(sprintf("  %-28s %s\n", label, val))
 
 cat("== env ==\n")
@@ -35,8 +37,9 @@ say("participant key",            file.exists(participant_key_csv()))
 
 # The path helpers create their directory on demand (.ensure_dir in _shared/R/00_paths.R),
 # so the two lines below establish that the store resolves and can be created. They are
-# not a permissions test: nothing is written and no file is removed.
-cat("== output store writable ==\n")
+# not a permissions test. The helpers may create missing directories, but no file is
+# written and none is removed.
+cat("== output store resolves (created on demand) ==\n")
 say("paper1_results()", { d <- paper1_results(); dir.exists(d) })
 say("paper2_derived()", { d <- paper2_derived(); dir.exists(d) })
 
@@ -57,3 +60,4 @@ res <- tryCatch({
 say("tiny cmdstan fit", res)
 
 cat(if (ok) "\n[check_arc_env] PASS\n" else "\n[check_arc_env] FAIL\n")
+if (!ok) quit(status = 1)

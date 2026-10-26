@@ -26,9 +26,12 @@
 #
 # WHICH FILES
 #   paper_1_transfer/results:   _*.csv and *_decoding_*.csv
-#   paper_2_plasticity/results: _*.csv and p2_*.csv
-# Every *.rds is left out, as is 07_aperiodic_features.csv, the one pipeline-internal
-# table in Paper 2. A CSV that matches no pattern is not listed.
+#   paper_2_plasticity/results: _*.csv, p2_*.csv and 07_aperiodic_features.csv
+# Every *.rds is left out. 07_aperiodic_features.csv is named on its own because it is
+# the one results table named after the script that writes it, and the Paper 2
+# manuscript reads it for the specparam peak and recording counts in the Method. Its
+# tagged sensitivity copies (_knee, _fit<max>hz) are not listed. A CSV that matches no
+# pattern is not listed.
 #
 # The class column is what read.csv() infers from the first 200 rows, so a column that is
 # entirely NA within those rows reads as logical. The row count printed under each file is
@@ -45,11 +48,11 @@ LES_CODEBOOK_ROOT <- here::here()
 # File-name globs listed for each paper, applied to the paper's results/ folder.
 LES_CODEBOOK_PAPERS <- list(
   paper_1_transfer   = c("_*.csv", "*_decoding_*.csv"),
-  paper_2_plasticity = c("_*.csv", "p2_*.csv")
+  paper_2_plasticity = c("_*.csv", "p2_*.csv", "07_aperiodic_features.csv")
 )
 
-# Files matched by a pattern above that are nevertheless left out.
-LES_CODEBOOK_SKIP <- c("07_aperiodic_features.csv")
+# Files matched by a pattern above that are nevertheless left out. None at present.
+LES_CODEBOOK_SKIP <- character(0)
 
 LES_CODEBOOK_DESCRIPTIONS <- file.path(LES_CODEBOOK_ROOT, "_shared", "R",
                                        "codebook_descriptions.csv")

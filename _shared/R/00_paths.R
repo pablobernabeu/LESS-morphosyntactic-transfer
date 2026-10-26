@@ -13,10 +13,15 @@
 #
 # WHY ANCHOR TO THE PROJECT ROOT WITH `here`?
 # -------------------------------------------
-# `here::here()` locates the project root by searching upwards for a sentinel
-# file (here, "LESS Project.Rproj") and builds every path relative to it. This is
-# the recommended pattern for reproducible, portable research compendia
-# (Marwick, Boettiger & Mullen, 2018, The American Statistician,
+# `here::here()` locates the project root and builds every path relative to it. When the
+# here package loads, it searches upwards from the working directory for the first
+# folder that meets any of its root criteria: an .Rproj file, renv.lock, _quarto.yml, a
+# .git folder and several others. In this repository only the root meets them (it holds
+# "LESS Project.Rproj", renv.lock and .git); the cluster copy of the code holds the
+# .Rproj file alone. When no folder meets them, here takes the working directory itself
+# as the root rather than failing, which is why the resolved root is printed at the foot
+# of this file. This is the recommended pattern for reproducible, portable research
+# compendia (Marwick, Boettiger & Mullen, 2018, The American Statistician,
 #  https://doi.org/10.1080/00031305.2017.1375986; project-oriented workflow,
 #  Bryan, 2017, https://www.tidyverse.org/blog/2017/12/workflow-vs-script/).
 #
@@ -27,8 +32,13 @@
 # PROJECT ROOT (e.g. read.csv("data/Participant IDs and session progress.csv")).
 # To reuse that validated code *without modifying it* (a non-destructive
 # requirement of this project), we anchor the session's working directory at the
-# root exactly once. After this call, both (a) the legacy root-relative paths and
-# (b) our own `here::here()` calls resolve correctly from any starting location.
+# root exactly once. After this call our own `here::here()` calls resolve from any
+# starting location, and the legacy root-relative paths resolve against <root>/data.
+# That is the data root of data_path() only when LES_DATA_ROOT is unset, or when, as on
+# the cluster, <root>/data is a link to LES_DATA_ROOT (_shared/hpc/arc_env.sh creates it
+# when no `data` entry exists). The one live reader of such paths, Paper 1's vendored
+# importer (paper_1_transfer/scripts/_eeg_import.R), stops when the two differ, so the
+# exports and the participant key cannot come from different trees.
 # =============================================================================
 
 # --- Require `here` ---------------------------------------------------------------
@@ -46,15 +56,10 @@ if (!requireNamespace("here", quietly = TRUE)) {
 }
 
 # --- Anchor the project root ----------------------------------------------------
-# `here::here()` locates the root by searching upwards for the "LESS Project.Rproj"
-# sentinel. The tryCatch is a last-resort fallback to the working directory, so that
-# sourcing this file can never itself abort a run on a machine where the sentinel is
-# missing. The announcement at the foot of this file makes the resolved root visible in
-# the log either way.
-.les_root <- tryCatch(
-  here::here(),
-  error = function(e) normalizePath(getwd(), winslash = "/", mustWork = FALSE)
-)
+# here::here() does not fail when no root criterion is met: it falls back to the working
+# directory (see the header). The announcement at the foot of this file makes the
+# resolved root visible in the log either way.
+.les_root <- here::here()
 
 # Bridge for the legacy root-relative loaders (see header for rationale).
 setwd(.les_root)
@@ -69,6 +74,16 @@ setwd(.les_root)
 #     LES_DATA_ROOT = $LES_BASE/data    (read-only inputs)
 #     LES_STORE     = $LES_BASE/store   (derived data, results, figures)
 # so the personal disk only ever holds code -- never gigabytes of data or fits.
+# A variable that is exported but empty would put every path under it at the filesystem
+# root (file.path("", "results") is "/results"), so it stops the run instead of being
+# taken as unset.
+for (.v in c("LES_DATA_ROOT", "LES_STORE")) {
+  if (!is.na(Sys.getenv(.v, unset = NA)) && !nzchar(trimws(Sys.getenv(.v)))) {
+    stop(.v, " is set but empty. Unset it to use the project tree, or point it at the ",
+         "folder to use (see _shared/hpc/arc_env.sh).", call. = FALSE)
+  }
+}
+rm(.v)
 .les_data_root <- Sys.getenv("LES_DATA_ROOT", unset = here::here("data"))
 .les_store     <- Sys.getenv("LES_STORE",     unset = .les_root)
 
@@ -79,6 +94,20 @@ setwd(.les_root)
 # set. The six output helpers (paper{1,2}_figures, _results and _derived) create their
 # directory on demand, so no script needs to pre-create folders. The read-only data helper
 # and the source-tree helpers only build a path.
+#
+# Every helper takes `...` as character path components, joins them with file.path()
+# under its root and returns the result: one path, or one per element when a component
+# is a vector, as in paper2_results(paste0(ids, ".rds")). An output helper creates the
+# parent folder when the final name ends in a file extension such as .csv, and otherwise
+# creates a folder at the path itself. A caller may rely on the second rule for a
+# subfolder (paper2_results("diagnostics")), but it also means that an extensionless brms
+# cache stem passed as paper1_results(cell_tag) leaves an empty folder named after the
+# stem beside <stem>.rds; build such a stem as file.path(paper1_results(), cell_tag),
+# which creates only results/ (ISSUES.md G01-14). The source-tree helpers (paper1_path,
+# paper1_scripts, paper2_path, paper2_scripts, shared_path) have no caller at present and
+# are kept as the documented route to each source folder, for new scripts and
+# interactive use. Sourcing this file also sets the working directory (see the header and
+# the setwd() call above) and prints the resolved roots (see the foot of the file).
 
 # Shared, read-only data root (never written to by the paper pipelines).
 # Root is LES_DATA_ROOT when set (ARC project space), else <project>/data.
@@ -115,12 +144,16 @@ shared_path        <- function(...) here::here("_shared", ...)
 
 # --- internal: create a directory (recursively) for a path and return it --------
 # When the path looks like a file (has an extension) we create its PARENT folder;
-# otherwise we treat the path itself as a directory to create.
+# otherwise we treat the path itself as a directory to create. Vectorised, because callers
+# such as paper2_results(paste0(ids, ".rds")) pass several paths at once. Returns `p`
+# unchanged.
 .ensure_dir <- function(p) {
   if (length(p) == 0) return(p)
   looks_like_file <- grepl("\\.[A-Za-z0-9]+$", basename(p))
-  target_dir <- if (looks_like_file) dirname(p) else p
-  if (!dir.exists(target_dir)) dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
+  target_dir <- ifelse(looks_like_file, dirname(p), p)
+  for (d in unique(target_dir)) {
+    if (!dir.exists(d)) dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  }
   p
 }
 

@@ -1,5 +1,12 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# The rule covers data/ as well. Its text inputs (the CSVs, the BrainVision .vhdr, .vmrk and
+# .txt exports, the lab logs) are stored LF-normalised, whereas the original exports kept
+# outside git carry CRLF. The exceptions are a few files git classifies as binary (nine CSVs
+# and 19 .vhdr files), which are stored as they are. Any other committed input therefore
+# matches its original only once CR is stripped,
+# and a checksum of the inputs has to hash normalised content, for instance
+# `git hash-object --path=<repo path> <file>` run inside a clone, or sha256 after removing CR.
 
 # The cluster runs the job scripts through bash, which fails on a carriage return at
 # the end of a line with "$'\r': command not found" before it reaches anything else.
@@ -9,8 +16,8 @@
 *.sh    text eol=lf
 *.slurm text eol=lf
 
-# R itself reads CRLF without complaint, but these scripts are deployed to Linux and
-# then compared with their deployed copies by checksum
-# (_shared/hpc/deploy_to_cluster.sh), and a difference in line endings alone would fail
-# that comparison on every file.
+# R itself reads CRLF without complaint. The pin makes every checkout, on Windows or Linux,
+# write the committed LF bytes, so a checksum taken by hand on the dev box agrees with one
+# taken on a cluster copy made from any other checkout. .R files checked out before this
+# rule was added keep CRLF until they are next checked out.
 *.R     text eol=lf

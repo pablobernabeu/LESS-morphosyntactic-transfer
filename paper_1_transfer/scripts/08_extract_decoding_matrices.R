@@ -14,9 +14,9 @@
 # https://doi.org/10.1126/science.1063736; Kriegeskorte et al., 2008 -- see step 09;
 # Grootswagers et al., 2017, JoCN, https://doi.org/10.1162/jocn_a_01068).
 #
-# OUTPUT LAYOUT (one file per property):
-#   paper1_derived("_decoding_<property>.rds")
-# A list with:
+# OUTPUT LAYOUT (two files per property, both in paper1_derived(); under
+# LES_P1_EXCLUDE_REPROCESSED=1 both names carry _exclreproc after the property):
+#   _decoding_<property>.rds, a list with:
 #   * X       : numeric array [trial x channel x time]  (the decoding tensor)
 #   * meta    : data.frame, one row per trial (aligned to dim 1 of X), columns:
 #                 trial_uid, participant_lab_ID, session, mini_language,
@@ -26,6 +26,12 @@
 #               LES_DECODE_N_EEG = 31 of them, see step (1b) below)
 #   * times    : numeric vector of retained time points in ms (dim 3 order)
 #   * property : the property string
+#   * time_step_ms, baseline_corrected : the two build options, as used
+#   * x_digest : digest::digest() of X. Step 09 appends its first 12 characters to the
+#                fingerprint that keys every permutation checkpoint, so a tensor rebuilt
+#                with different values but the same counts can never resume old blocks.
+#   _decoding_<property>_fingerprint.rds, the cache record (see "Tensor cache" below):
+#     list(fingerprint, tensor_size, tensor_mtime, written_at).
 # Storing a dense array (rather than a long tidy frame) keeps the file small and lets
 # step 09 slice a [trial x channel] pattern at each time point with zero reshaping.
 #
@@ -56,9 +62,11 @@
 #    2014, TiCS, https://doi.org/10.1016/j.tics.2014.01.002). Controlled by the
 #    environment variable LES_DECODE_TIME_STEP_MS; set it to 2 to keep every sample.
 # 2. PER-TRIAL BASELINE CORRECTION (subtract each trial's own pre-stimulus mean, per
-#    channel). Decoding is invariant to a per-trial additive offset only if the
-#    classifier has an intercept, but removing slow pre-stimulus drift equalises the
-#    channel baselines across trials and conditions and prevents a decoder from
+#    channel). A classifier intercept is one constant for every trial, so it cannot
+#    absorb an offset that differs from trial to trial (slow drift, a shifted channel
+#    baseline), and step 09's discriminant has no intercept in any case. Subtracting the
+#    per-trial, per-channel pre-stimulus mean is what removes such offsets: it equalises
+#    the channel baselines across trials and conditions and prevents a decoder from
 #    exploiting baseline-period differences as if they were evoked signal -- a
 #    conservative guard consistent with standard ERP practice (Luck, 2014). We use the
 #    pre-stimulus window (time < 0) exactly as the univariate pipeline does.
@@ -101,6 +109,10 @@ LES_DECODE_NON_EEG <- c("x_dir", "y_dir", "z_dir")
 LES_DECODE_N_EEG <- 31L
 
 # Time step (ms) between retained samples. Must be a multiple of 2 (native step).
+#' Decoding time step in ms, from LES_DECODE_TIME_STEP_MS (default "4").
+#' @param cli_arg optional override; no caller passes it (.run() reads the environment
+#'   only), so it is kept only for interactive use.
+#' @return integer, an even number >= 2; stops on anything else.
 les_decode_time_step_ms <- function(cli_arg = NA_character_) {
   v <- if (!is.na(cli_arg)) cli_arg else Sys.getenv("LES_DECODE_TIME_STEP_MS", unset = "4")
   step <- suppressWarnings(as.integer(v))
@@ -110,37 +122,53 @@ les_decode_time_step_ms <- function(cli_arg = NA_character_) {
   step
 }
 
-les_decode_rds <- function(property) paper1_derived(paste0("_decoding_", property, ".rds"))
+# The robustness analysis (LES_P1_EXCLUDE_REPROCESSED=1) writes its own tensor, fingerprint
+# and results under the "_exclreproc" tag, so it never overwrites the primary analysis.
+#' Path of one property's decoding tensor; step 09 and 09b read the tensor through it.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @return paper1_derived("_decoding_<property><tag>.rds"), <tag> being "" or "_exclreproc".
+les_decode_rds <- function(property)
+  paper1_derived(paste0("_decoding_", property, les_p1_exclreproc_tag(), ".rds"))
 
 # =============================================================================
 # Tensor cache
 # -----------------------------------------------------------------------------
-# Rebuilding the tensor costs ~90 minutes and peaks near 220 GB -- it, not the
-# decoding itself, is why the decode job must request 256 GB. Because the decoder
-# runs under a short walltime and is resubmitted repeatedly (resuming from
-# within-block permutation checkpoints), that extraction would otherwise be repaid
-# on every restart for no gain.
+# Rebuilding the tensor takes up to about two hours and is the memory peak of the decode
+# job, not the decoding itself: on HTC the extraction peaked at 195 GB for differential
+# object marking and 117 GB for verb-object number agreement (8829254, September 2026),
+# and gender agreement's was killed at 254 GiB of a 256 GB request, which is why
+# hpc/submit_eeg_rerun.sh gives gender 480 GB (built in 2 h 07 min on 2 October 2026).
+# Because a decode job that hits its walltime is resubmitted (resuming from the
+# permutation checkpoints), that extraction would otherwise be repaid on every restart
+# for no gain.
 #
-# A cache here is dangerous in one specific direction. Failing CLOSED (rebuilding
-# when it need not) merely wastes 90 minutes. Failing OPEN -- reusing a tensor after
-# an input changed -- silently feeds a ten-day permutation analysis, and therefore a
+# A cache here is dangerous in one specific direction. Failing CLOSED (rebuilding when
+# it need not) merely wastes a couple of hours. Failing OPEN -- reusing a tensor after an
+# input changed -- silently feeds a ten-day permutation analysis, and therefore a
 # published p value, from the wrong data. Every check below is written to fail closed:
 # anything unverifiable is treated as a miss.
 #
 # The fingerprint must cover VALUES, not just references. The sharpest instance is
-# LES_P1_KEEP_MISFILTERED: `les_p1_drop_misfiltered()` branches on it at run time, so
-# deparsing that function is not enough. Without the env var itself in the fingerprint,
-# the documented full-sample sensitivity analysis would hit the cache, silently reuse
-# the EXCLUDED tensor and reproduce the primary result exactly. _config.R already
-# records this variable in per-fit metadata for the same reason.
+# LES_P1_EXCLUDE_REPROCESSED: `les_p1_drop_misfiltered()` branches on it at run time, so
+# deparsing that function is not enough. The robustness tensor is also written under its
+# own _exclreproc name, so the two arms never share a cache file; recording the switch in
+# the fingerprint as well means that even a tensor moved or copied between the two names
+# is refused rather than reused. _config.R records this variable in per-fit metadata for
+# the same reason.
 #
 # Set LES_DECODE_FORCE_EXTRACT (1/true/yes) to rebuild regardless.
 # =============================================================================
 LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by hand
 
+#' Path of a tensor's cache record, the sidecar step 08 writes beside it.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @return paper1_derived("_decoding_<property><tag>_fingerprint.rds").
 .les_decode_fp_path <- function(property)
-  paper1_derived(paste0("_decoding_", property, "_fingerprint.rds"))
+  paper1_derived(paste0("_decoding_", property, les_p1_exclreproc_tag(), "_fingerprint.rds"))
 
+#' TRUE for the usual spellings of an affirmative switch value ("1", "true", "yes", ...).
+#' @param x character vector, typically Sys.getenv() output.
+#' @return logical vector.
 .les_truthy <- function(x) tolower(trimws(x)) %in% c("1", "true", "yes", "y", "t")
 
 # Stat a set of files. Paths are recorded RELATIVE to `root` where given, because the
@@ -148,6 +176,11 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
 # are not unique (837 gender exports share only 252 basenames across session folders),
 # so a file refiled between sessions would otherwise look unchanged. row.names are
 # stripped so nothing depends on list.files() ordering as an accidental guard.
+#' Size and mtime of a set of files, for the cache fingerprint.
+#' @param paths character vector of file paths; missing files are dropped.
+#' @param root optional directory the labels are made relative to.
+#' @return data.frame(file, size, mtime) sorted by file, or NULL when no file exists or
+#'   any stat fails (which the cache treats as unverifiable).
 .les_stat <- function(paths, root = NULL) {
   paths <- paths[file.exists(paths)]
   if (!length(paths)) return(NULL)
@@ -164,6 +197,10 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
 
 # The raw exports this property's pattern actually matches, keyed by path relative to
 # the EEG root. NULL when none are found, which the cache treats as unverifiable.
+#' Stat the exports that feed one property's tensor.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @return .les_stat() table of the legacy exports and marker files, plus the overlay
+#'   files and the overlay manifest (labelled "overlay/..."); NULL when none is found.
 .les_decode_source_files <- function(property) {
   pat <- les_p1_file_pattern(property)
   dir <- erp_single_trials_path()
@@ -171,7 +208,27 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
   f <- c(list.files(dir, pattern = paste0(pat, "txt$"), full.names = TRUE, recursive = TRUE),
          list.files(dir, pattern = paste0(pat, "vmrk$"), full.names = TRUE, recursive = TRUE))
   if (!length(f)) return(NULL)
-  .les_stat(f, root = dir)
+  legacy <- .les_stat(f, root = dir)
+  # Reprocessed or rebuilt files in the overlay replace legacy files at import
+  # (_eeg_import.R), so they and the tracked manifest that admits them are part of the
+  # tensor's identity. Labelled with an "overlay/" prefix so they never collide with legacy
+  # paths.
+  over_root <- les_p1_eeg_overlay_root()
+  if (dir.exists(over_root)) {
+    over <- .les_stat(list.files(over_root, pattern = paste0(pat, "(txt|vmrk)$"),
+                                 full.names = TRUE, recursive = TRUE), root = over_root)
+    if (!is.null(over)) {
+      over$file <- paste0("overlay/", over$file)
+      legacy <- rbind(legacy, over)
+    }
+  }
+  man <- les_p1_eeg_overlay_manifest()
+  if (file.exists(man)) {
+    m <- .les_stat(man, root = dirname(man))
+    m$file <- paste0("overlay/", m$file)
+    legacy <- rbind(legacy, m)
+  }
+  legacy
 }
 
 # Everything outside this script that shapes the tensor or its metadata: the whole
@@ -179,12 +236,15 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
 # (which supplies the language assignment in `meta`), and _config.R (which defines
 # les_p1_misfiltered_rows(), the exclusion table and the file patterns -- deparsing
 # les_p1_drop_misfiltered() does not reach its callees).
+#' Stat the scripts and key files outside this script that shape the tensor.
+#' @return .les_stat() table of the data-side loaders and participant key and of
+#'   _config.R and _eeg_import.R; NULL when either side cannot be stated.
 .les_decode_input_scripts <- function() {
   data_side <- c(list.files(data_path("R_functions"), pattern = "\\.R$", full.names = TRUE),
                  list.files(data_path("importation and preprocessing"), pattern = "\\.R$",
                             full.names = TRUE),
                  participant_key_csv())
-  code_side <- here::here("paper_1_transfer", "scripts", "_config.R")
+  code_side <- here::here("paper_1_transfer", "scripts", c("_config.R", "_eeg_import.R"))
   # Rooted separately so both sets keep short, portable labels: the data tree lives
   # under $LES_DATA_ROOT on the cluster and beside the code locally.
   a <- .les_stat(data_side, root = normalizePath(data_path(), winslash = "/", mustWork = FALSE))
@@ -193,17 +253,28 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
   rbind(a, b)
 }
 
-# The importer reads the literal relative path 'data/raw data/EEG' from the working
-# directory, while this fingerprint stats data_path(). On the cluster those coincide
-# only because arc_env.sh creates a `data` symlink, and it skips that if any `data`
-# entry already exists. If the two ever diverge we would be verifying a tree the
-# analysis does not read, so refuse the cache instead.
+# The vendored importer reads the exports through data_path(), but the merge still reads
+# the participant key and the preprocessing scripts through the relative path 'data' in
+# the working directory. On the cluster those coincide only because arc_env.sh creates a
+# `data` symlink, and it skips that if any `data` entry already exists. The merge itself
+# stops when they diverge (_eeg_import.R); refusing the cache here as well means a stale
+# tensor is never served from a tree the analysis would not read.
+#' Whether the relative 'data' path and data_path() are the same tree.
+#' @return TRUE when ./data and data_path() resolve to the same directory.
 .les_decode_paths_agree <- function() {
   a <- normalizePath("data", winslash = "/", mustWork = FALSE)
   b <- normalizePath(data_path(), winslash = "/", mustWork = FALSE)
   identical(a, b)
 }
 
+#' Everything that could change a property's tensor, as one comparable list.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @param time_step_ms,baseline_correct the build options passed to
+#'   .les_build_decoding_tensor().
+#' @return named list: version, options, grid constants, exclusion tables, the
+#'   exclude-reprocessed switch, data root, stats of the inputs and loaders (NULL entries
+#'   when they cannot be stated), deparsed builder and exclusion functions, collation,
+#'   R and package versions. Compared with identical() against the stored record.
 .les_decode_fingerprint <- function(property, time_step_ms, baseline_correct) {
   list(
     version          = LES_DECODE_TENSOR_VERSION,
@@ -215,14 +286,20 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
     n_eeg            = LES_DECODE_N_EEG,
     non_eeg          = LES_DECODE_NON_EEG,
     misfiltered      = LES_P1_MISFILTERED,
+    deviation        = LES_P1_PROTOCOL_DEVIATION,
+    invalid_exports  = LES_P1_INVALID_EXPORTS,
     # Read at build time and therefore part of the tensor's identity, not merely of
     # the code that consults it. See the section header.
-    keep_misfiltered = identical(Sys.getenv("LES_P1_KEEP_MISFILTERED"), "1"),
+    exclude_reprocessed = les_p1_exclude_reprocessed(),
     file_pattern     = les_p1_file_pattern(property),
     data_root        = normalizePath(data_path(), winslash = "/", mustWork = FALSE),
     sources          = .les_decode_source_files(property),
     builder          = deparse(.les_build_decoding_tensor),
     drop_misfiltered = deparse(les_p1_drop_misfiltered),
+    drop_deviation   = deparse(les_p1_drop_protocol_deviation),
+    drop_invalid     = deparse(les_p1_drop_invalid_exports),
+    apply_exclusions = deparse(les_p1_apply_eeg_exclusions),
+    s2_rereference   = deparse(les_p1_s2_rereference),
     loaders          = .les_decode_input_scripts(),
     # Channel order comes from sort(unique(electrode)), so collation matters; the
     # reshaping stack can also change output across R and package versions.
@@ -237,6 +314,12 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
   )
 }
 
+#' Whether the tensor on disk may be reused instead of rebuilt.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @param fp the current .les_decode_fingerprint().
+#' @return TRUE only when LES_DECODE_FORCE_EXTRACT is unset, every input could be stated,
+#'   ./data agrees with data_path(), and the stored record matches `fp` and the tensor's
+#'   current size and mtime; FALSE otherwise (fails closed). Reads the tensor's sidecar.
 .les_decode_cache_ok <- function(property, fp) {
   if (.les_truthy(Sys.getenv("LES_DECODE_FORCE_EXTRACT"))) {
     message("[decode-extract] LES_DECODE_FORCE_EXTRACT set -- rebuilding regardless of cache")
@@ -264,6 +347,11 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
     identical(prev$tensor_mtime, as.numeric(inf$mtime))
 }
 
+#' Record the inputs a tensor was built from, beside the tensor.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @param fp the .les_decode_fingerprint() the tensor was built under.
+#' @return invisibly, the sidecar path. Writes .les_decode_fp_path(property) atomically,
+#'   capturing the tensor file's size and mtime; call it only after the tensor is saved.
 .les_decode_write_fingerprint <- function(property, fp) {
   inf <- file.info(les_decode_rds(property))
   .les_save_atomic(list(fingerprint  = fp,
@@ -274,8 +362,13 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
 }
 
 # Write via a temp file and rename, so an interrupted write cannot leave a truncated
-# artefact that a later run would accept (09_run_decoding.R uses the same idiom for
-# its permutation checkpoints, for the same reason).
+# artefact that a later run would accept. 09_run_decoding.R does NOT share this idiom:
+# its within-block partials go through a fixed temp name with an unchecked rename, and
+# its block checkpoints are written in place (ISSUES.md G08-10).
+#' saveRDS() through a process-unique temp file and a checked rename.
+#' @param object any R object.
+#' @param path destination .rds path.
+#' @return invisibly, `path`; stops when the rename fails.
 .les_save_atomic <- function(object, path) {
   # Process-unique: two runs for the same property can overlap under the resubmission
   # regime, and a shared temp path would let them interleave into one file that the
@@ -292,17 +385,38 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
 # Factored out so the (index-sensitive) tensor assembly can be unit-tested on small
 # synthetic input without the heavy EEG load. Input `raw` is the merge output (one row
 # per electrode x sample x trial); output is the list described in the header.
+#
+# This function's deparsed code is part of the tensor fingerprint, so editing its body
+# invalidates every cached tensor. Rscript deparses without source references, so its
+# comments do not enter the fingerprint. The comment at step (0) predates the overlay of
+# reprocessed records; the description of step (0) below is the current one.
 # =============================================================================
+#' Reshape one merged single-trial load into the decoding tensor (pure; no file I/O).
+#' @param raw data.frame from les_p1_merge_trialbytrial(), one row per electrode x sample
+#'   x trial, with columns participant_lab_ID, session, electrode, sentence_marker,
+#'   mini_language, grammaticality, grammatical_property, amplitude (numeric) and time
+#'   (ms, numeric), plus eeg_source where the overlay was read. Factors are accepted.
+#' @param property the property string, written into trial_uid and the result.
+#' @param time_step_ms integer, the bin width (an even number of ms).
+#' @param baseline_correct logical, subtract each trial's per-channel pre-stimulus mean.
+#' @return list(X, meta, channels, times, property, time_step_ms, baseline_corrected) as
+#'   described in the header (x_digest is added by the caller). Step (0) applies
+#'   les_p1_apply_eeg_exclusions(): legacy rows of the listed mis-filtered and invalid
+#'   exports and every row of the protocol-deviation participant are dropped, while
+#'   overlay rows of reprocessed or recovered records stay unless
+#'   LES_P1_EXCLUDE_REPROCESSED=1. Warns, without stopping, when the channel count is
+#'   not LES_DECODE_N_EEG; extract_paper1_decoding() stops on it.
 .les_build_decoding_tensor <- function(raw, property, time_step_ms = 4L,
                                         baseline_correct = TRUE) {
 
-  # (0) Drop the four Session-3 datasets high-pass filtered at 1 Hz instead of 0.1 Hz
+  # (0) Drop the Session-3 datasets high-pass filtered at 1 Hz instead of 0.1 Hz
   #     (see LES_P1_MISFILTERED in _config.R). The decoder is at least as exposed to
   #     this as the amplitude models: a filter that introduces an artifactual
   #     opposite-polarity deflection changes the multivariate pattern, and because the
   #     mis-filtered datasets belong to one session only, that change is confounded
-  #     with session in exactly the session-resolved analyses.
-  raw <- les_p1_drop_misfiltered(raw)
+  #     with session in exactly the session-resolved analyses. The same call drops the
+  #     participant excluded for a protocol deviation (LES_P1_PROTOCOL_DEVIATION).
+  raw <- les_p1_apply_eeg_exclusions(raw)
 
   # (1) Keep only the two canonical grammaticality conditions we decode between.
   raw <- raw[raw$grammaticality %in% c("Grammatical", "Ungrammatical"), , drop = FALSE]
@@ -431,6 +545,17 @@ LES_DECODE_TENSOR_VERSION <- 2L   # bump to invalidate every cached tensor by ha
 # =============================================================================
 # Core: load one property (every channel present) and write its decoding tensor.
 # =============================================================================
+#' Build, or reuse from the cache, one property's decoding tensor.
+#' @param property one of names(LES_P1_PROPERTIES).
+#' @param time_step_ms integer bin width in ms (les_decode_time_step_ms() from .run()).
+#' @param baseline_correct logical, per-trial per-channel baseline correction.
+#' @return invisibly, the tensor path les_decode_rds(property).
+#' Side effects: on a cache miss, sources _eeg_import.R and the legacy preprocessing
+#' scripts into the global environment, runs the full single-trial merge, then writes
+#' les_decode_rds(property) and its sidecar .les_decode_fp_path(property), both
+#' atomically and in that order. On a cache hit it writes nothing.
+#' Stops when digest is missing or the tensor does not have LES_DECODE_N_EEG channels,
+#' before anything is written.
 extract_paper1_decoding <- function(property, time_step_ms = 4L, baseline_correct = TRUE) {
 
   stopifnot(property %in% names(LES_P1_PROPERTIES))
@@ -454,10 +579,10 @@ extract_paper1_decoding <- function(property, time_step_ms = 4L, baseline_correc
   # reduces this to the 31 EEG channels recorded in every contributing session.
   # include_baseline keeps time < 0 for the per-trial baseline step. The importer's own
   # aggregation/z-scoring is bypassed (aggregate_* = FALSE); we reshape the raw samples.
-  source(legacy_eeg_loader())  # lazy: heavy loader
+  source(here::here("paper_1_transfer", "scripts", "_eeg_import.R"))  # lazy: heavy loader (see _eeg_import.R)
   message("[decode-extract] loading ", property,
           " (every channel present; non-EEG and session-inconsistent ones dropped after load) ...")
-  raw <- merge_trialbytrial_EEG_data(
+  raw <- les_p1_merge_trialbytrial(
     EEG_file_pattern      = les_p1_file_pattern(property),
     min_time              = LES_DECODE_MIN_MS,
     max_time              = LES_DECODE_MAX_MS,
@@ -470,6 +595,16 @@ extract_paper1_decoding <- function(property, time_step_ms = 4L, baseline_correc
   built <- .les_build_decoding_tensor(raw, property,
                                       time_step_ms = time_step_ms,
                                       baseline_correct = baseline_correct)
+
+  # The montage is documented, and reported, as 31 EEG sensors. The builder only warns
+  # on another count (its body is fingerprinted, so it is left as it is), and a warning
+  # in a two-week job's log is easily missed, so the tensor is refused here instead. If
+  # the montage change is intended, set LES_DECODE_N_EEG to the new count: it is part of
+  # the cache fingerprint, so every cached tensor is then rebuilt (ISSUES.md G08-17).
+  if (dim(built$X)[2] != LES_DECODE_N_EEG)
+    stop("[decode-extract] ", property, ": ", dim(built$X)[2], " EEG channels (",
+         paste(built$channels, collapse = ", "), "), but LES_DECODE_N_EEG is ",
+         LES_DECODE_N_EEG, "; no tensor written.", call. = FALSE)
 
   out_path <- les_decode_rds(property)
   les_assert_readonly_data(out_path)      # never write inside read-only data/
@@ -507,6 +642,8 @@ extract_paper1_decoding <- function(property, time_step_ms = 4L, baseline_correc
 # =============================================================================
 # Entry point
 # =============================================================================
+#' Command-line entry: Rscript 08_extract_decoding_matrices.R [property]; every
+#' property when none is given. The time step comes from LES_DECODE_TIME_STEP_MS only.
 .run <- function() {
   args <- commandArgs(trailingOnly = TRUE)
   step <- les_decode_time_step_ms()      # env-driven; default 4 ms

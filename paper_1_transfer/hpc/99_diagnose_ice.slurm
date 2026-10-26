@@ -5,16 +5,21 @@
 # In August 2026 tasks 0-11 of the p1_fit_erp array died with
 #   g++: internal compiler error: Segmentation fault signal terminated program cc1plus
 # while compiling the generated Stan model. This job compiles ONE such cell four ways
-# on a compute node -- with and without within-chain threading, at the CmdStan default
-# (-O3) and at -O1 -- and reports which combinations build. Read-only with respect to
-# results/: it writes only into a scratch directory ($LES_STORE/../ice_diag).
+# on a compute node, with and without within-chain threading and at -O3 (the CmdStan
+# default) and -O1, and reports which combinations build. Every build passes its level
+# as CXXFLAGS_OPTIM on the make command line. A command-line variable overrides the
+# `CXXFLAGS_OPTIM = -O1` line that _shared/hpc/arc_env.sh writes into $CMDSTAN/make/local,
+# and a build that passed no level would inherit that pin and compile at -O1.
+# Read-only with respect to results/: it writes only into a scratch directory
+# ($LES_STORE/../ice_diag).
 #
 # WHAT IT FOUND (2026-08-04, job 12684901; 99b_test_O2.slurm added -O2 afterwards)
 #   threading    + -O3  ICE after 19 s     threading    + -O2  ICE after 4 s
 #   threading    + -O1  builds in 90 s
 #   no threading + -O3  builds in 82 s     no threading + -O1  builds in 38 s
 # So it is a GCC 14.2.0 bug instantiating Stan's reduce_sum templates above -O1, not a
-# resource limit: peak RSS was under 2 GB against a 96 GB allocation. les_brm() uses
+# resource limit: peak RSS was under 2 GB, against the 96 GB of the ERP fitting job in which
+# the failure first appeared (this job requests 48 GB). les_brm() uses
 # within-chain threading, so -O1 is the only workable level, and _shared/hpc/arc_env.sh
 # now appends `CXXFLAGS_OPTIM = -O1` to $CMDSTAN/make/local on every job. The ERP fits
 # completed on 2026-08-06 with no recurrence.
@@ -86,9 +91,9 @@ try_build () {         # $1 label   $2 stan stem   $3... extra make vars
   fi
 }
 
-try_build "A_threaded_default" "$D/threaded" STAN_THREADS=true
+try_build "A_threaded_O3"      "$D/threaded" STAN_THREADS=true CXXFLAGS_OPTIM=-O3
 try_build "B_threaded_O1"      "$D/threaded" STAN_THREADS=true CXXFLAGS_OPTIM=-O1
-try_build "C_serial_default"   "$D/serial"
+try_build "C_serial_O3"        "$D/serial"   CXXFLAGS_OPTIM=-O3
 try_build "D_serial_O1"        "$D/serial"   CXXFLAGS_OPTIM=-O1
 
 echo; echo "[diag] done $(date)"

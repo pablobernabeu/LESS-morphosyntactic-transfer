@@ -2,7 +2,7 @@
 # _shared/hpc/reconnaissance/probe_rseeg2.R  --  is OSF tq7vy resting-state or task EEG?
 # Reads the session logbook + a marker census (markers, duration) for one recording
 # per session folder. Task EEG = thousands of stimulus markers; resting = a handful.
-#   Rscript _shared/hpc/reconnaissance/probe_rseeg2.R   (needs network; prints to stdout only)
+#   Rscript _shared/hpc/reconnaissance/probe_rseeg2.R   (needs network, prints to stdout, downloads into tempdir() only)
 #
 # STATUS: superseded reconnaissance, not a pipeline step, and nothing in either paper
 # calls it. The question it asks was settled by locating the resting-state recordings in

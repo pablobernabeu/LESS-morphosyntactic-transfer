@@ -2,9 +2,9 @@
 # =============================================================================
 # 00_install_dependencies.slurm  --  bootstrap the Bayesian toolchain where none exists (ARC)
 # -----------------------------------------------------------------------------
-# Installs brms + the CmdStan C++ toolchain, posterior/bayesplot/tidybayes/
-# bayestestR, papaja and the Paper 2 resting-state stack INTO the project-space R
-# library ($LES_BASE/Rlib/R-4.5) and builds CmdStan under $LES_BASE/cmdstan. Run a
+# Installs brms, cmdstanr, posterior/bayesplot/loo, papaja, the quarto R package and
+# eegUtils (the Paper 2 resting-state package) INTO the project-space R library
+# ($LES_BASE/Rlib/R-4.5) and builds the CmdStan C++ toolchain under $LES_BASE/cmdstan. Run a
 # SINGLE time before any model-fitting job (it is shared with Paper 2 -- do not run both
 # 00 scripts).
 #

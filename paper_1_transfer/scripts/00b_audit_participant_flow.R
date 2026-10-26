@@ -8,6 +8,12 @@
 #   results/_flow_inconsistencies.csv one row per detected inconsistency
 # to BOTH papers' results directories, because the cohort is shared.
 #
+# ORDER
+# Run it after 00_extract_participants.R, on the same store (hpc/00_descriptives.slurm
+# runs it last). Check (8) compares the matrix with Paper 1's results/_sample_flow.csv,
+# which that script writes. The check is skipped without a message when the file is
+# absent, and otherwise uses whatever copy is on disk.
+#
 # WHY
 # The counts reported in the participant-flow figure are stage TOTALS. A total can
 # be correct while the underlying membership is not: a participant can appear in an
@@ -15,6 +21,19 @@
 # language assignment recorded in the key can disagree with the parity rule the
 # extraction scripts use to derive it. None of that is visible in a count, so it is
 # checked per participant here.
+#
+# WHAT THE CHECKS CAN AND CANNOT SEE
+# The usable-data stages are taken from les_flow_stage_ids() in
+# 00_extract_participants.R, the one definition both scripts use, so this audit cannot
+# disagree with the flow about what a stage means. Until October 2026 it kept its own
+# copy of those criteria, which could drift from 00's and in two cases already had (the
+# accuracy file set and the resting-state stage; ISSUES.md, G04-06 and G04-14). The audit
+# therefore checks membership against attendance, identity and language, and check (8)
+# detects a _sample_flow.csv that no longer matches the inputs on disk, which is how the
+# stale flow of September 2026 arose (ISSUES.md, N12). It does not test whether the
+# criteria themselves are right. The manuscripts' notes on individual participants in the
+# flow (such as the participant who missed Session 5 and returned for Session 6) report
+# what this audit finds, so re-check them whenever _flow_inconsistencies.csv changes.
 #
 # GROUND TRUTH
 # `data/Participant IDs and session progress.csv` carries one row per participant
@@ -27,11 +46,24 @@ suppressPackageStartupMessages({
   library(here)
   source(here::here("_shared", "R", "00_paths.R"))
   source(here::here("_shared", "R", "03_data_manifest.R"))
+  # les_flow_stage_ids(); sourcing runs nothing, because the script guards its entry point.
+  source(here::here("paper_1_transfer", "scripts", "00_extract_participants.R"))
   library(dplyr)
 })
 
 .blank <- function(x) is.na(x) | trimws(as.character(x)) == ""
 
+#' One row per participant in the key, with attendance and per-stage presence flags
+#'
+#' Takes no arguments.
+#' @return A data frame sorted by participant_lab_ID, holding the key rows that carry an
+#'   integer lab ID, with columns participant_lab_ID (integer), participant_home_ID and
+#'   language_recorded (character), attended_S1 to attended_S6 (logical, NA when the key
+#'   has no date column for that session), and the logical stage flags usable_accuracy,
+#'   battery_baseline, trajectory, joint_predictor, usable_erp and usable_rseeg. A stage
+#'   whose input has not been built is NA for everyone.
+#' @details Reads the participant key (participant_key_csv()) and, through
+#'   les_flow_stage_ids() in 00_extract_participants.R, the derived files the flow counts.
 les_participant_matrix <- function() {
 
   key <- utils::read.csv(participant_key_csv(),
@@ -59,58 +91,14 @@ les_participant_matrix <- function() {
   }
 
   # ---- Data presence per analysis stage --------------------------------------
-  present <- function(ids) m$participant_lab_ID %in% suppressWarnings(as.integer(as.character(ids)))
-
-  acc_ids <- unique(unlist(lapply(
-    list.files(paper1_derived(), pattern = "^accuracy_.*\\.rds$", full.names = TRUE),
-    function(f) as.character(readRDS(f)$participant_lab_ID))))
-  m$usable_accuracy <- present(acc_ids)
-
-  # Presence anywhere in the per-cell retained-trial table. 00_extract_participants.R
-  # first restricts that table to the modelled Grammatical/Ungrammatical rows. The two
-  # criteria currently pick out the same 63 participants, so the flow_total_mismatch
-  # check below compares like with like, but they are not identical by construction:
-  # a participant contributing only ancillary-violation cells would count here and not
-  # there.
-  erp_f <- erp_trial_count_csv()
-  m$usable_erp <- if (file.exists(erp_f))
-    present(unique(utils::read.csv(erp_f, stringsAsFactors = FALSE)$participant_lab_ID)) else NA
-
-  # These stages use the SAME usability criteria as 00_extract_participants.R, not mere
-  # presence in a file. Counting presence over-states them (by 1 and 3 respectively),
-  # because a participant can appear in a derived file without meeting the criterion the
-  # models actually apply. Replicating the criteria is what makes the comparison against
-  # the flow artefact a genuine cross-check rather than a category error.
-  .rds <- function(file) { f <- paper2_derived(file); if (file.exists(f)) readRDS(f) else NULL }
-
-  ci <- .rds("cognitive_indices.rds")
-  cog_ids_s1 <- character(0)
-  if (!is.null(ci) && "participant_lab_ID" %in% names(ci)) {
-    ci1 <- ci[ci$session %in% 1, , drop = FALSE]
-    idx <- intersect(c("stroop_interference", "digit_span", "asrt_learning"), names(ci1))
-    cog_ids_s1 <- as.character(unique(ci1$participant_lab_ID[rowSums(!is.na(ci1[idx])) > 0]))
+  # The same membership the flow counts (les_flow_stage_ids()); NA throughout for a stage
+  # whose input has not been built. The columns keep the order the matrix has always had.
+  stage_ids <- les_flow_stage_ids()
+  for (st in c("usable_accuracy", "usable_erp", "battery_baseline", "trajectory",
+               "joint_predictor", "usable_rseeg")) {
+    m[[st]] <- if (is.null(stage_ids[[st]])) NA else
+      m$participant_lab_ID %in% suppressWarnings(as.integer(stage_ids[[st]]))
   }
-  tj <- .rds("learning_trajectory.rds")
-  traj_ids <- if (!is.null(tj)) {
-    idc <- intersect(c("participant_lab_ID", "participant_home_ID"), names(tj))[1]
-    if (!is.na(idc)) as.character(unique(tj[[idc]])) else character(0)
-  } else character(0)
-  joint_ids <- intersect(cog_ids_s1, traj_ids)
-
-  rs <- .rds("resting_state_eeg.rds")
-  rs_ids <- character(0)
-  if (!is.null(rs) && "participant_lab_ID" %in% names(rs)) {
-    if ("condition" %in% names(rs))
-      rs <- rs[grepl("closed", rs$condition, ignore.case = TRUE), , drop = FALSE]
-    bnd <- intersect(c("delta", "theta", "alpha", "beta", "gamma", "iaf"), names(rs))
-    if (length(bnd)) rs <- rs[stats::complete.cases(rs[, bnd, drop = FALSE]), , drop = FALSE]
-    rs_ids <- intersect(as.character(unique(rs$participant_lab_ID)), joint_ids)
-  }
-
-  m$battery_baseline <- present(cog_ids_s1)
-  m$trajectory       <- present(traj_ids)
-  m$joint_predictor  <- present(joint_ids)
-  m$usable_rseeg     <- present(rs_ids)
 
   m[order(m$participant_lab_ID), ]
 }
@@ -118,6 +106,22 @@ les_participant_matrix <- function() {
 # -----------------------------------------------------------------------------
 # Consistency checks. Each returns zero or more rows describing a violation.
 # -----------------------------------------------------------------------------
+
+#' Check the participant matrix for logical inconsistencies
+#'
+#' @param m The data frame les_participant_matrix() returns. The checks use its columns
+#'   participant_lab_ID, participant_home_ID, language_recorded, attended_S1 to
+#'   attended_S6 and the stage flags usable_accuracy, usable_erp, battery_baseline,
+#'   trajectory and usable_rseeg, and check (8) compares every column of `m` named after a
+#'   stage in _sample_flow.csv.
+#' @return A data frame with columns check, severity ("error", "warning" or "info"),
+#'   participant_lab_ID (NA on the stage-level rows of check (8)) and detail, with zero
+#'   rows when no check fires.
+#' @details Beyond `m` it reads LES_ERP_SESSIONS from the data manifest, Paper 2's
+#'   learning_trajectory.rds for check (7) and Paper 1's results/_sample_flow.csv for check
+#'   (8). Each of those two checks is skipped without a message when its file is absent.
+#'   The file check (8) reads is written by 00_extract_participants.R, which is why the
+#'   script runs after it (see ORDER in the header).
 les_flow_inconsistencies <- function(m) {
   out <- list()
   add <- function(check, ids, detail, severity = "warning") {
@@ -196,8 +200,8 @@ les_flow_inconsistencies <- function(m) {
   #     flow stage counts participants with BOTH a battery and a trajectory, but the
   #     joint model listwise-deletes on the complete predictor set, so a participant
   #     with any NA cognitive predictor is in the stage yet absent from the fit
-  #     (e.g. a baseline Stroop below the minimum-observation rule). Recording the
-  #     IDs here is what lets the manuscripts explain the stage-vs-fitted gap.
+  #     (e.g. a baseline Stroop below the minimum-observation rule). The IDs are
+  #     recorded here so that the stage-versus-fitted gap has a documented source.
   traj_path <- paper2_derived("learning_trajectory.rds")
   if (file.exists(traj_path)) {
     tr <- readRDS(traj_path)
@@ -214,22 +218,34 @@ les_flow_inconsistencies <- function(m) {
     }
   }
 
-  # (8) Reconciliation against the shipped flow artefact. The per-participant matrix and
-  #     _sample_flow.csv are produced by different code from different sources, so a
-  #     disagreement means one of them is wrong. Recorded with participant_lab_ID = NA
-  #     because it is a property of the stage, not of a participant.
+  # (8) Reconciliation against the shipped flow artefact. Both apply les_flow_stage_ids(),
+  #     so a disagreement means _sample_flow.csv was written from other inputs than the
+  #     ones on disk now (a stale or hand-edited flow), not that a criterion is wrong.
+  #     A stage the matrix cannot evaluate, because its input is not built here, is
+  #     reported as unverifiable rather than read as zero. Recorded with
+  #     participant_lab_ID = NA because it is a property of the stage, not of a participant.
   fl_path <- paper1_results("_sample_flow.csv")
+  stage_row <- function(check, severity, detail) {
+    out[[length(out) + 1]] <<- data.frame(check = check, severity = severity,
+                                          participant_lab_ID = NA_integer_, detail = detail,
+                                          stringsAsFactors = FALSE)
+  }
   if (file.exists(fl_path)) {
     fl <- utils::read.csv(fl_path, stringsAsFactors = FALSE)
     for (st in intersect(fl$stage, names(m))) {
-      mine <- sum(m[[st]] %in% TRUE)
       ship <- fl$n_total[fl$stage == st][1]
-      if (!is.na(ship) && ship != mine)
-        out[[length(out) + 1]] <- data.frame(
-          check = "flow_total_mismatch", severity = "error",
-          participant_lab_ID = NA_integer_,
-          detail = sprintf("stage '%s': participant matrix gives %d, _sample_flow.csv gives %d",
-                           st, mine, ship), stringsAsFactors = FALSE)
+      if (all(is.na(m[[st]]))) {
+        if (!is.na(ship))
+          stage_row("flow_stage_unverifiable", "warning",
+                    sprintf("stage '%s': _sample_flow.csv gives %d, but its input is not built here",
+                            st, ship))
+        next
+      }
+      mine <- sum(m[[st]] %in% TRUE)
+      if (is.na(ship) || ship != mine)
+        stage_row("flow_total_mismatch", "error",
+                  sprintf("stage '%s': participant matrix gives %d, _sample_flow.csv gives %s",
+                          st, mine, if (is.na(ship)) "NA" else as.character(ship)))
     }
   }
 
@@ -238,6 +254,13 @@ les_flow_inconsistencies <- function(m) {
   do.call(rbind, out)
 }
 
+#' Build the participant matrix and its inconsistency table, and write both to both papers
+#'
+#' Takes no arguments.
+#' @return list(matrix, inconsistencies), invisibly.
+#' @details Writes _participant_matrix.csv and _flow_inconsistencies.csv to both papers'
+#'   results/ folders (paper1_results() and paper2_results()), four files in all, each
+#'   through les_assert_readonly_data(). Neither manuscript reads them.
 les_write_flow_audit <- function() {
   m <- les_participant_matrix()
   inc <- les_flow_inconsistencies(m)

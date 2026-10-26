@@ -1,5 +1,5 @@
 # =============================================================================
-# 05_funnel.R  --  Shared participant-flow ("funnel") figure generator
+# 05_funnel.R  --  Shared participant-flow figure generator
 # =============================================================================
 #
 # Both manuscripts report participant flow, but they draw on DIFFERENT stages of
@@ -11,222 +11,272 @@
 # were rendered into Paper 1's chain. The generator is shared so the two figures are
 # visually identical; the CONTENT is paper-specific.
 #
-# DESIGN
-# Each stage spans the full width of the panel. The retained participants are drawn solid
-# and centred, and the participants no longer present are drawn as a faint "ghost"
-# completing the bar to full cohort width. The reasons for drawing it this way:
-#   * cumulative attrition is legible as filled-versus-faint area, without the
-#     reader having to compare bar lengths across the figure;
-#   * every bar is the same width, so a stage label can never overflow its bar,
-#     the failure mode of a plain width-proportional funnel;
-#   * a tapering ribbon can be drawn between consecutive stages, which carries the
-#     eye down the funnel and makes each drop a visible narrowing.
-# Where a stage records the mini-language split, the retained portion is divided by
-# language, so the reader can see whether attrition fell evenly on the two groups, which
-# the counts alone do not show.
+# les_flow() draws a CONSORT-style diagram (Schulz et al., 2010): enrolment split into
+# the two mini-language arms, the attendance of each arm at each session, and the
+# analysis samples. It is monochrome and has no legend; the arms are placed in
+# LES_LANG_LEVELS order (06_manuscript_helpers.R), so Mini-Norwegian is on the left.
+# The stages are not strictly nested, and the layout says so without a note:
+#   * attendance is not monotonic (a participant who missed Session 5 returned for
+#     Session 6), so each session is a line in one box per arm, with its absences,
+#     and no arrows run between sessions;
+#   * the analysis samples pool data across sessions, so they can exceed the last
+#     session's attendance and hang from no attendance box;
+#   * only a genuinely nested chain (Paper 2's Part A sample) is joined by arrows,
+#     with the participants removed at each step in a box beside the arrow.
+# Every count is passed in or derived here (a difference of two passed counts); none
+# is typed into the figure.
 #
-# WHY THE TIERS ARE SEPARATED
-# The stages are NOT strictly nested, so the figure must not imply subsetting:
-#   * attendance is not monotonic -- at least one participant missed a session and
-#     returned for a later one, so "attended S6" is not a subset of "attended S5";
-#   * the analysis samples are drawn from the whole cohort across sessions, not from
-#     the final session, so they can exceed the last attendance bar.
-# Stages are therefore grouped into tiers, and ribbons are drawn only WITHIN a tier,
-# where the subset relation genuinely holds.
-# =============================================================================
-
-# INPUTS AND OUTPUT
-# `d` needs: label (character), n (integer), tier (character/factor).
-# Optional: n_a / n_b (group split of n), `note`.
-# `base_size` is the ggplot base font size, and every text size in the figure is derived
-# from it. `group_labs` names the two mini-language groups, in the legend and in the split
-# fill. `cols` overrides the two group colours, which otherwise come from depictr.
-# `ghost` and `ghost_edge` are the fill and outline of the faint remainder block.
-# `tier_gap` is the vertical space left between tiers, in stage-row units, where one stage
-# occupies one unit. `show_loss` toggles the "-n  x% kept" annotations to the right of
-# each within-tier drop. `show_legend` can suppress the legend even where the split is
-# recorded, and the legend is dropped automatically when no stage records one.
-# Returns a ggplot object. Both manuscripts call it as les_funnel(d, base_size = 9), in
-# paper_1_transfer/paper_1_morphosyntax.qmd and
-# paper_2_plasticity/paper_2_neuroplasticity.qmd.
-les_funnel <- function(d, base_size = 9,
-                       group_labs = c("Mini-English", "Mini-Norwegian"),
-                       cols = NULL, ghost = "grey93", ghost_edge = "grey85",
-                       tier_gap = 1.05, show_loss = TRUE, show_legend = TRUE) {
-  stopifnot(all(c("label", "n", "tier") %in% names(d)))
-  d <- d[!is.na(d$n), , drop = FALSE]
-  if (!nrow(d)) return(ggplot2::ggplot() + ggplot2::theme_void())
-
-  if (is.null(cols)) {
-    # The literal fallback is depictr's first two qualitative colours, so the figure comes
-    # out the same whether or not the package is installed.
-    cols <- if (requireNamespace("depictr", quietly = TRUE))
-      depictr::depictr_palette(3, "qualitative")[1:2] else c("#005b96", "#e69f00")
+# les_flow() replaced les_funnel(), a ghost-bar funnel that labelled each step with the
+# difference of two stage totals and so misstated attrition wherever the stages were not
+# nested (ISSUES.md G02-01).
+#
+# les_flow(enrolled, arms, attendance, analysis_arms = NULL, analysis_pooled = NULL,
+#          pooled_footnote = NULL, headings, base_size = LES_FIG_BASE_SIZE)
+# enrolled         total enrolled and assigned a mini-language
+# arms             named count per arm, in LES_LANG_LEVELS order (left arm first)
+# attendance       data.frame(session, n_a, n_b): attendance per session, n_a the left arm
+# analysis_arms    (Paper 1) data.frame(label, n_a, n_b), one line per analysis sample
+#                  in each arm's box; an optional `short` column names each sample in the
+#                  "Not analysed" box when the arm's shortfalls differ between samples
+# analysis_pooled  (Paper 2) data.frame(label, n, dropped): a nested chain of pooled
+#                  samples; dropped[i] names the reason for the step into row i (NA
+#                  for the first row)
+# pooled_footnote  optional c(label, n), set in italics under the last chain box
+# headings         the section headings: enrolment, attendance and, when an analysis
+#                  section is drawn, analysis
+# Returns a ggplot drawn on a 6.5 in wide canvas in which one data unit is one inch.
+# The height the diagram needs is attached as attr(p, "les_flow_height") (inches); the
+# chunk's fig-height should equal it, and a warning is raised when it is smaller.
+les_flow <- function(enrolled, arms, attendance, analysis_arms = NULL,
+                     analysis_pooled = NULL, pooled_footnote = NULL, headings,
+                     base_size = LES_FIG_BASE_SIZE) {
+  has_arms_sec   <- !is.null(analysis_arms)
+  has_pooled_sec <- !is.null(analysis_pooled)
+  stopifnot(length(arms) == 2L, !is.null(names(arms)), is.data.frame(attendance),
+            all(c("session", "n_a", "n_b") %in% names(attendance)),
+            !(has_arms_sec && has_pooled_sec),
+            length(headings) >= 2L + (has_arms_sec || has_pooled_sec))
+  num <- function(x) suppressWarnings(as.integer(x))
+  enrolled <- num(enrolled); arm_n <- num(arms); arm_lab <- names(arms)
+  att_a <- num(attendance$n_a); att_b <- num(attendance$n_b)
+  # Guards: no subset may exceed the arm it is drawn from.
+  le <- function(x, cap) all(is.na(cap) | is.na(x) | x <= cap)
+  stopifnot(le(att_a, arm_n[1]), le(att_b, arm_n[2]))
+  if (!anyNA(c(enrolled, arm_n)) && sum(arm_n) != enrolled)
+    warning("les_flow(): the two arms (", sum(arm_n), ") do not add up to the enrolled total (",
+            enrolled, ").")
+  if (has_arms_sec) {
+    an_a <- num(analysis_arms$n_a); an_b <- num(analysis_arms$n_b)
+    stopifnot(le(an_a, arm_n[1]), le(an_b, arm_n[2]))
   }
-  has_split <- all(c("n_a", "n_b") %in% names(d)) && any(!is.na(d$n_a))
-
-  d$tier <- factor(d$tier, levels = unique(d$tier))
-  has_note <- if ("note" %in% names(d)) !is.na(d$note) & nzchar(d$note) else rep(FALSE, nrow(d))
-  nlines <- function(s) if (is.na(s) || !nzchar(s)) 0 else
-    lengths(regmatches(s, gregexpr("\n", s))) + 1
-
-  # Row layout: one unit per stage, extra room under a stage that carries a note,
-  # and a gap between tiers for the tier heading and its rule.
-  d$row <- NA_real_
-  y <- 0; tiers <- levels(d$tier)
-  for (ti in seq_along(tiers)) {
-    ix <- which(d$tier == tiers[ti])
-    for (k in seq_along(ix)) {
-      y <- y - 1
-      d$row[ix[k]] <- y
-      if (has_note[ix[k]]) y <- y - (0.18 + 0.15 * nlines(d$note[ix[k]]))
-    }
-    if (ti < length(tiers)) y <- y - tier_gap
+  if (has_pooled_sec) {
+    pool_n <- num(analysis_pooled$n)
+    stopifnot(le(pool_n, enrolled))
   }
 
-  W    <- 0.50                              # half-width of the full cohort
-  wmax <- max(d$n, na.rm = TRUE)
-  d$half   <- W * d$n / wmax
-  d$bar_t  <- d$row - 0.06
-  d$bar_b  <- d$row - 0.44
-  d$lab_y  <- d$row + 0.17
+  # Geometry, in inches on the 6.5 in canvas.
+  W     <- 6.5
+  fs    <- 0.85 * base_size        # box text, pt
+  lh    <- fs * 1.3 / 72           # line height
+  pad   <- 0.075                   # box padding, top and bottom
+  hs    <- base_size / 72          # heading text height
+  inset <- 0.12                    # left inset of left-aligned box text
+  row_gap <- 0.22                  # between two rows of boxes
+  arm_x <- c(2.15, 4.35); arm_w <- 1.95
+  edge  <- 0.01                    # keeps a flush box's outline inside the canvas
+  box_h <- function(k) k * lh + 2 * pad
 
-  # Retained block, split by group where available.
-  # A stage that does not record the split must NOT be drawn in a language colour:
-  # filling it with the first group's colour would assert that every one of its
-  # participants belonged to that group. Such stages get a neutral fill, kept out of
-  # the legend, so the figure says only what the data say.
-  UNSPLIT <- "(not recorded by language)"
-  split_ok <- if (has_split) !is.na(d$n_a) & !is.na(d$n_b) else rep(FALSE, nrow(d))
-  blocks <- NULL
-  if (any(split_ok)) {
-    s <- d[split_ok, , drop = FALSE]
-    tot <- pmax(s$n_a + s$n_b, 1)
-    mid <- -s$half + 2 * s$half * (s$n_a / tot)
-    blocks <- rbind(
-      data.frame(xmin = -s$half, xmax = mid,    ymin = s$bar_b, ymax = s$bar_t,
-                 grp = group_labs[1], stringsAsFactors = FALSE),
-      data.frame(xmin = mid,     xmax = s$half, ymin = s$bar_b, ymax = s$bar_t,
-                 grp = group_labs[2], stringsAsFactors = FALSE))
+  # Labels are plotmath, so that n can be italic. Each is framed by a phantom pair of
+  # parentheses, which gives every line the same ascent and descent, so vertically
+  # centred lines keep a common baseline whatever glyphs they contain. The section
+  # headings carry the pair after the text (pm_r), so that they start exactly where
+  # their rule does.
+  q  <- function(s) paste0('"', gsub('(["\\\\])', "\\\\\\1", s), '"')
+  pm <- function(e) paste0('phantom("(")*', e, '*phantom(")")')
+  pm_r <- function(e) paste0(e, '*phantom("()")')
+  nn <- function(n) {
+    v <- num(n)
+    if (length(v) != 1L || is.na(v)) '~"pending"' else paste0("==", v)
   }
-  if (any(!split_ok)) {
-    u <- d[!split_ok, , drop = FALSE]
-    blocks <- rbind(blocks,
-      data.frame(xmin = -u$half, xmax = u$half, ymin = u$bar_b, ymax = u$bar_t,
-                 grp = UNSPLIT, stringsAsFactors = FALSE))
+  lab_n <- function(prefix, n, suffix = NULL, italic_prefix = FALSE) {
+    pre <- if (italic_prefix) paste0("italic(", q(prefix), ")") else q(prefix)
+    pm(paste0(pre, "~italic(n)", nn(n), if (!is.null(suffix)) paste0("~", q(suffix))))
   }
-  blocks <- blocks[blocks$xmax > blocks$xmin, , drop = FALSE]
+  sess_line <- function(s, n, arm) {
+    absent <- arm - num(n)
+    lab_n(paste0("Session ", s, ":"), n,
+          if (!is.na(absent) && absent > 0) paste0("(", absent, " absent)"))
+  }
 
-  # Ghost remainder: what the cohort would fill if nobody had been lost.
-  gh <- rbind(
-    data.frame(xmin = -W, xmax = -d$half, ymin = d$bar_b, ymax = d$bar_t),
-    data.frame(xmin = d$half, xmax = W,   ymin = d$bar_b, ymax = d$bar_t))
-  gh <- gh[gh$xmax - gh$xmin > 1e-9, , drop = FALSE]
+  boxes <- data.frame(xmin = numeric(), xmax = numeric(), top = numeric(), bot = numeric())
+  texts <- data.frame(x = numeric(), y = numeric(), label = character(), hjust = numeric())
+  segs  <- data.frame(x = numeric(), y = numeric(), xend = numeric(), yend = numeric(),
+                      arrow = logical())
+  heads <- data.frame(y = numeric(), label = character())
+  rules <- numeric()
+  add_box <- function(xmin, xmax, top, h, lines, hjust = 0.5) {
+    boxes <<- rbind(boxes, data.frame(xmin = xmin, xmax = xmax, top = top, bot = top + h))
+    x <- if (hjust == 0) xmin + inset else (xmin + xmax) / 2
+    texts <<- rbind(texts, data.frame(x = x, y = top + pad + lh * (seq_along(lines) - 0.5),
+                                      label = unname(lines), hjust = hjust, row.names = NULL))
+  }
+  add_seg <- function(x, y, xend, yend, arrow = FALSE)
+    segs <<- rbind(segs, data.frame(x = x, y = y, xend = xend, yend = yend, arrow = arrow))
+  y <- 0.02                        # the cursor runs down the page
+  heading <- function(label, first = FALSE) {
+    if (!first) y <<- y + 0.12
+    heads <<- rbind(heads, data.frame(y = y, label = label))
+    y <<- y + hs + 0.02
+    rules <<- c(rules, y)
+    y <<- y + 0.20
+  }
 
-  # Tapering ribbons between consecutive stages within a tier.
-  rib <- NULL; seg <- NULL
-  parts <- lapply(tiers, function(tg) {
-    s <- d[d$tier == tg, , drop = FALSE]
-    if (nrow(s) < 2) return(NULL)
-    s <- s[order(-s$row), ]
-    do.call(rbind, lapply(seq_len(nrow(s) - 1), function(i) {
-      a <- s[i, ]; b <- s[i + 1, ]
-      data.frame(
-        id = paste(tg, i),
-        x  = c(-a$half, a$half, b$half, -b$half),
-        yv = c(a$bar_b, a$bar_b, b$bar_t, b$bar_t),
-        stringsAsFactors = FALSE)
-    }))
-  })
-  rib <- do.call(rbind, Filter(Negate(is.null), parts))
+  # Enrolment and group assignment.
+  heading(headings[1], first = TRUE)
+  h1 <- box_h(1)
+  add_box(3.25 - 1.45, 3.25 + 1.45, y, h1, lab_n("Enrolled and assigned a mini-language,", enrolled))
+  enrol_bot <- y + h1
+  y <- enrol_bot + row_gap
+  bar <- enrol_bot + row_gap / 2
+  add_seg(3.25, enrol_bot, 3.25, bar)
+  add_seg(arm_x[1], bar, arm_x[2], bar)
+  for (i in 1:2) add_seg(arm_x[i], bar, arm_x[i], y, arrow = TRUE)
+  for (i in 1:2) add_box(arm_x[i] - arm_w / 2, arm_x[i] + arm_w / 2, y, h1,
+                         lab_n(paste0(arm_lab[i], ","), arm_n[i]))
+  arm_bot <- y + h1
+  y <- arm_bot
 
-  if (show_loss) {
-    lp <- lapply(tiers, function(tg) {
-      s <- d[d$tier == tg, , drop = FALSE]
-      if (nrow(s) < 2) return(NULL)
-      s <- s[order(-s$row), ]
-      data.frame(y = (utils::head(s$bar_b, -1) + utils::tail(s$bar_t, -1)) / 2,
-                 lost = utils::head(s$n, -1) - utils::tail(s$n, -1),
-                 kept = utils::tail(s$n, -1) / utils::head(s$n, -1))
+  # Attendance: one box per arm, one line per session, and no arrows between sessions.
+  heading(headings[2])
+  for (i in 1:2) add_seg(arm_x[i], arm_bot, arm_x[i], y, arrow = TRUE)
+  ha <- box_h(nrow(attendance))
+  att <- list(att_a, att_b)
+  for (i in 1:2) add_box(arm_x[i] - arm_w / 2, arm_x[i] + arm_w / 2, y, ha,
+                         mapply(sess_line, attendance$session, att[[i]], arm_n[i]), hjust = 0)
+  y <- y + ha
+
+  # Paper 1: the analysis samples of each arm, and beside each arm, on its outer side and
+  # joined to it by a line, a "Not analysed" box counting the participants that arm
+  # enrolled who are missing from each of its samples (enrolment minus the sample n).
+  # When every sample lacks the same number it shows that one count; otherwise one line
+  # per sample. The counts alone cannot say whether the same participants are missing
+  # from every sample, so the box does not claim that they contribute to no sample.
+  if (has_arms_sec) {
+    heading(headings[3])
+    short <- if ("short" %in% names(analysis_arms)) analysis_arms$short else
+      sub("^Single-trial ", "", sub(" data$", "", analysis_arms$label))
+    an <- list(an_a, an_b)
+    lines_arm <- lapply(1:2, function(i) mapply(function(l, n) lab_n(paste0(l, ","), n),
+                                                analysis_arms$label, an[[i]]))
+    lines_na <- lapply(1:2, function(i) {
+      sh <- arm_n[i] - an[[i]]
+      if (all(is.na(sh) | sh <= 0)) return(NULL)
+      if (length(unique(sh)) == 1L) return(c(pm(q("Not analysed")), pm(paste0("italic(n)", nn(sh[1])))))
+      k <- which(!is.na(sh) & sh > 0)
+      c(pm(q("Not analysed")), mapply(function(l, s) lab_n(paste0(l, ":"), s), short[k], sh[k]))
     })
-    seg <- do.call(rbind, Filter(Negate(is.null), lp))
-    if (!is.null(seg)) seg <- seg[seg$lost > 0, , drop = FALSE]
+    hr <- box_h(max(nrow(analysis_arms), lengths(lines_na)))
+    for (i in 1:2) add_box(arm_x[i] - arm_w / 2, arm_x[i] + arm_w / 2, y, hr, lines_arm[[i]], hjust = 0)
+    for (i in 1:2) if (length(lines_na[[i]])) {
+      # 1.05 in wide, flush with the outer edge of the canvas; wider only when the text
+      # needs it (the shortfalls differ between samples), with a warning if it would
+      # then reach the arm's box.
+      bw <- 1.05
+      if (length(lines_na[[i]]) > 2L && requireNamespace("systemfonts", quietly = TRUE)) {
+        plain <- c("Not analysed", paste0(short, ": n = ", arm_n[i] - an[[i]]))
+        need <- max(systemfonts::string_width(plain, family = "sans", size = fs, res = 72)) / 72 + 0.1
+        bw <- max(bw, need)
+      }
+      gap_in <- if (i == 1) (arm_x[1] - arm_w / 2) - bw else (W - bw) - (arm_x[2] + arm_w / 2)
+      if (gap_in < 0.06) warning("les_flow(): the 'Not analysed' box of ", arm_lab[i],
+                                 " reaches its arm's analysis box; shorten the `short` labels.")
+      if (i == 1) add_box(edge, bw, y, hr, lines_na[[i]]) else add_box(W - bw, W - edge, y, hr, lines_na[[i]])
+      # The line ties the box to its own arm, as an exclusion box is tied to its flow.
+      arm_edge <- if (i == 1) arm_x[1] - arm_w / 2 else arm_x[2] + arm_w / 2
+      add_seg(if (i == 1) bw else W - bw, y + hr / 2, arm_edge, y + hr / 2)
+    }
+    y <- y + hr
   }
 
-  lab <- function(i) {
-    s <- sprintf("%s   n = %d", d$label[i], d$n[i])
-    if (has_split && !is.na(d$n_a[i]) && !is.na(d$n_b[i]))
-      s <- sprintf("%s  (%d / %d)", s, d$n_a[i], d$n_b[i])
-    s
+  # Paper 2: the pooled chain. Each box is a subset of the one above it, so the boxes are
+  # joined by arrows, and the participants removed at each step (the previous n minus
+  # the current n) are counted in a box beside the arrow when there are any.
+  if (has_pooled_sec) {
+    heading(headings[3])
+    cx <- 2.17; cw <- 3.1; xw <- 2.2
+    ok <- !anyNA(pool_n) && all(diff(pool_n) <= 0)
+    if (!ok) warning("les_flow(): the pooled chain is not non-increasing or has a missing ",
+                     "count, so it is drawn without arrows or exclusion boxes.")
+    drop <- c(NA_integer_, utils::head(pool_n, -1L) - utils::tail(pool_n, -1L))
+    show_x <- ok & !is.na(drop) & drop > 0
+    hb <- box_h(1)
+    gap <- if (any(show_x)) hb + 2 * 0.09 else row_gap
+    for (i in seq_along(pool_n)) {
+      if (i > 1) {
+        prev_bot <- y
+        y <- y + gap
+        if (ok) add_seg(cx, prev_bot, cx, y, arrow = TRUE)
+        if (show_x[i]) {
+          mid <- prev_bot + gap / 2
+          add_seg(cx, mid, W - xw, mid)
+          add_box(W - xw, W - edge, mid - hb / 2, hb,
+                  lab_n(paste0(analysis_pooled$dropped[i], ","), drop[i]))
+        }
+      }
+      add_box(cx - cw / 2, cx + cw / 2, y, hb, lab_n(paste0(analysis_pooled$label[i], ","), pool_n[i]))
+      y <- y + hb
+    }
+    if (!is.null(pooled_footnote)) {
+      y <- y + 0.05
+      texts <- rbind(texts, data.frame(x = cx, y = y + lh / 2,
+                                       label = lab_n(pooled_footnote[1], pooled_footnote[2],
+                                                     italic_prefix = TRUE),
+                                       hjust = 0.5))
+      y <- y + lh
+    }
   }
-  d$text <- vapply(seq_len(nrow(d)), lab, character(1))
 
-  heads <- do.call(rbind, lapply(tiers, function(tg) {
-    s <- d[d$tier == tg, , drop = FALSE]
-    data.frame(tier = tg, y = max(s$row) + 0.60, stringsAsFactors = FALSE)
-  }))
+  H <- y + 0.03
+  # Outside a chunk opts_current returns knitr's default of 7 in, so read it only while
+  # knitr is running.
+  fh <- if (isTRUE(getOption("knitr.in.progress"))) knitr::opts_current$get("fig.height") else NULL
+  if (is.numeric(fh) && fh + 1e-6 < H)
+    warning(sprintf("les_flow(): the diagram needs %.2f in but fig-height is %.2f in, so it is compressed vertically.", H, fh))
+  # One data unit per inch in both directions: a taller canvas extends below the diagram.
+  ylim <- c(if (is.numeric(fh) && fh > H) H - fh else 0, H)
 
-  p <- ggplot2::ggplot()
-  # The connector is deliberately very light. At a heavier tone it merges with the
-  # ghost blocks into one continuous grey field, and the funnel stops reading as a
-  # sequence of stages.
-  if (!is.null(rib) && nrow(rib))
-    p <- p + ggplot2::geom_polygon(data = rib,
-                                   ggplot2::aes(x = x, y = yv, group = id),
-                                   fill = "grey96", colour = NA)
-  if (nrow(gh))
-    p <- p + ggplot2::geom_rect(data = gh,
-                                ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-                                fill = ghost, colour = ghost_edge, linewidth = 0.2)
+  # The cursor ran down the page; the plot's y axis runs up it.
+  segs$y <- H - segs$y; segs$yend <- H - segs$yend
+  boxes$ymin <- H - boxes$bot; boxes$ymax <- H - boxes$top
+  texts$y <- H - texts$y
+  heads$y <- H - heads$y
+  heads$label <- pm_r(paste0("bold(", q(heads$label), ")"))
+  ink <- "grey20"
+  xy <- ggplot2::aes(x = x, y = y, xend = xend, yend = yend)
+  lines_  <- segs[!segs$arrow, , drop = FALSE]
+  arrows_ <- segs[segs$arrow, , drop = FALSE]
+
+  p <- ggplot2::ggplot() +
+    ggplot2::annotate("segment", x = 0, xend = W, y = H - rules, yend = H - rules,
+                      colour = "grey75", linewidth = 0.3)
+  if (nrow(lines_))
+    p <- p + ggplot2::geom_segment(data = lines_, mapping = xy, colour = ink, linewidth = 0.35,
+                                   lineend = "butt")
+  if (nrow(arrows_))
+    p <- p + ggplot2::geom_segment(data = arrows_, mapping = xy, colour = ink, linewidth = 0.35,
+                                   linejoin = "mitre", arrow.fill = ink,
+                                   arrow = ggplot2::arrow(length = ggplot2::unit(0.055, "in"),
+                                                          type = "closed"))
   p <- p +
-    ggplot2::geom_rect(data = blocks,
-                       ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = grp),
-                       colour = "white", linewidth = 0.35) +
-    # A label rather than plain text: the connector passes behind the caption, so the
-    # white ground punches the text out of it and keeps each caption tied to the bar
-    # beneath it rather than floating on the band above.
-    ggplot2::geom_label(data = d, ggplot2::aes(x = 0, y = lab_y, label = text),
-                        size = base_size / 3.05, colour = "grey12",
-                        fill = "white", label.r = ggplot2::unit(0, "pt"),
-                        label.padding = ggplot2::unit(1.1, "pt"), linewidth = 0)
-
-  if (!is.null(seg) && nrow(seg))
-    p <- p + ggplot2::geom_text(
-      data = seg,
-      ggplot2::aes(x = W + 0.055, y = y,
-                   label = sprintf("-%d   %.0f%% kept", lost, 100 * kept)),
-      # base_size / 3.4 is about 8.4 pt at the 10 pt base both papers use, where the
-      # earlier divisor gave 7.7 pt, under the 8 pt print floor. grey35 lifts the contrast
-      # on white from about 4.7:1 (grey45) to 7:1.
-      size = base_size / 3.4, hjust = 0, colour = "grey35")
-
-  if ("note" %in% names(d)) {
-    nd <- d[has_note, , drop = FALSE]
-    if (nrow(nd))
-      p <- p + ggplot2::geom_text(data = nd,
-                                  ggplot2::aes(x = 0, y = bar_b - 0.10, label = note),
-                                  size = base_size / 3.5, vjust = 1, lineheight = 0.95,
-                                  fontface = "italic", colour = "grey35")
-  }
-
-  p <- p +
-    ggplot2::geom_segment(data = heads,
-                          ggplot2::aes(x = -W - 0.30, xend = W + 0.30, y = y - 0.09, yend = y - 0.09),
-                          colour = "grey88", linewidth = 0.25) +
-    ggplot2::geom_text(data = heads,
-                       ggplot2::aes(x = -W - 0.30, y = y + 0.06, label = toupper(tier)),
-                       hjust = 0, size = base_size / 3.5, colour = "grey35", fontface = "bold") +
-    ggplot2::scale_fill_manual(
-      values = stats::setNames(c(cols[1:2], "grey62"), c(group_labs, UNSPLIT)),
-      breaks = group_labs, name = NULL, drop = TRUE) +
-    ggplot2::scale_x_continuous(limits = c(-W - 0.32, W + 0.34), expand = c(0, 0)) +
-    ggplot2::coord_cartesian(clip = "off") +
-    ggplot2::labs(x = NULL, y = NULL) +
+    ggplot2::geom_rect(data = boxes, ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+                       fill = "white", colour = ink, linewidth = 0.35) +
+    ggplot2::geom_text(data = texts, ggplot2::aes(x = x, y = y, label = label, hjust = hjust),
+                       parse = TRUE, vjust = 0.5, size = fs / ggplot2::.pt, colour = "black") +
+    ggplot2::geom_text(data = heads, ggplot2::aes(x = 0, y = y, label = label), parse = TRUE,
+                       hjust = 0, vjust = 1, size = base_size / ggplot2::.pt, colour = "black") +
+    ggplot2::coord_cartesian(xlim = c(0, W), ylim = ylim, expand = FALSE, clip = "off") +
     ggplot2::theme_void(base_size = base_size) +
-    ggplot2::theme(legend.position = if (has_split && show_legend) "top" else "none",
-                   legend.key.size = ggplot2::unit(0.5, "lines"),
-                   legend.text = ggplot2::element_text(size = base_size * 0.85,
-                                                       margin = ggplot2::margin(l = 3, r = 3)),
-                   plot.margin = ggplot2::margin(4, 4, 4, 4))
+    ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0))
+  attr(p, "les_flow_height") <- H
   p
 }

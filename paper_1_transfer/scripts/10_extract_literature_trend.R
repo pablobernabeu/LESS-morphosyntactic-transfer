@@ -14,9 +14,9 @@
 #
 # METHOD
 # Retrieval uses the Scopus Search API through scopusflow (Bernabeu, 2026,
-# https://doi.org/10.5281/zenodo.21252669), which handles pagination, rate limits
+# https://CRAN.R-project.org/package=scopusflow), which handles pagination, rate limits
 # and retries, and records the exact query alongside each count so the search is
-# inspectable and repeatable.
+# inspectable; the counts are dated by retrieved_utc, because Scopus keeps indexing.
 #
 # Every term is scoped to TITLE-ABS-KEY. This matters: an unscoped term is matched
 # against the default (broader) field set and inflates the count several-fold, which
@@ -36,9 +36,9 @@
 #     literature.
 #
 # REQUIREMENTS
-# An Elsevier API key in SCOPUS_API_KEY (e.g. in ~/.Renviron). Without a key this
-# script is skipped and the manuscript falls back to a placeholder, consistent with
-# the project's render-anytime design.
+# scopusflow 0.4.0 and an Elsevier API key in SCOPUS_API_KEY (e.g. in ~/.Renviron).
+# Without either, this script stops without writing; the manuscript continues to use
+# the committed counts, or placeholders if that file is absent.
 #
 # USAGE
 #   Rscript paper_1_transfer/scripts/10_extract_literature_trend.R
@@ -52,13 +52,33 @@ suppressPackageStartupMessages({
   source(here::here("_shared", "R", "03_data_manifest.R"))  # les_assert_readonly_data()
 })
 
-# `years` is a fixed range rather than one anchored to Sys.Date(), so the counts the
-# manuscript reports do not shift with the date the script is re-run. The upper bound
-# is a completed publication year; extending it to the current year would make the last
-# point partial (see LIMITATIONS above).
+#' Count the L3-transfer literature by year and method in Scopus
+#'
+#' @param years Integer vector of completed publication years. It is a fixed range rather
+#'   than one anchored to Sys.Date(), so the counts the manuscript reports do not shift
+#'   with the date the script is re-run; extending it to the current year would make the
+#'   last point partial (see LIMITATIONS above).
+#' @return Invisibly, a data frame with 3 x length(years) rows: stratum, year, n, query,
+#'   retrieved_utc and scopusflow_version.
+#' @details Side effects: one Scopus count request per row (63 by default);
+#'   readRenviron("~/.Renviron") when SCOPUS_API_KEY is unset; a write of
+#'   results/_literature_trend.csv through les_assert_readonly_data(). Stops without
+#'   scopusflow or a key. Scopus counts change as records are indexed, so a re-run replaces
+#'   the reported counts with new ones; it therefore stops when the file exists unless
+#'   LES_P1_LIT_REFRESH=1 is set (ISSUES.md G07-09). The committed counts were retrieved on
+#'   or before 24 July 2026 (f2b1818) with a scopusflow release before 0.4.0, which the
+#'   file did not then record.
 les_literature_trend <- function(years = 2005:2025) {
+  f <- paper1_results("_literature_trend.csv")
+  if (file.exists(f) && !identical(Sys.getenv("LES_P1_LIT_REFRESH"), "1"))
+    stop("results/_literature_trend.csv exists. Scopus counts change as records are ",
+         "indexed, so a re-run replaces the reported counts; set LES_P1_LIT_REFRESH=1 to ",
+         "do so deliberately.")
   if (!requireNamespace("scopusflow", quietly = TRUE))
-    stop("scopusflow is required: pak::pak('pablobernabeu/scopusflow')")
+    stop(paste0(
+      "scopusflow is required; install the recorded CRAN release with ",
+      "pak::pkg_install('scopusflow@0.4.0')."
+    ))
   # Rscript does not always read ~/.Renviron before the package is consulted.
   if (!nzchar(Sys.getenv("SCOPUS_API_KEY")) && file.exists("~/.Renviron"))
     readRenviron("~/.Renviron")
@@ -85,7 +105,8 @@ les_literature_trend <- function(years = 2005:2025) {
                  query = q, stringsAsFactors = FALSE)
     }))))
 
-  f <- paper1_results("_literature_trend.csv")
+  out$retrieved_utc <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+  out$scopusflow_version <- as.character(utils::packageVersion("scopusflow"))
   les_assert_readonly_data(f)
   utils::write.csv(out, f, row.names = FALSE)
   message("[literature] wrote ", nrow(out), " rows to ", f)

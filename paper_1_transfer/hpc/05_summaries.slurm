@@ -3,9 +3,11 @@
 # 05_summaries.slurm  --  pool diagnostics, posterior summaries & contrasts (ARC)
 # -----------------------------------------------------------------------------
 # Aggregates every per-model artefact written by 03/04 into the pooled CSVs
-# (_pooled_convergence.csv, _pooled_posterior_summaries.csv) and computes the
-# S4 -> S6 retention contrasts (_retention_contrasts.csv). Light, single job; run
-# only after all fitting jobs have completed.
+# (_pooled_convergence.csv, _pooled_posterior_summaries.csv, _pooled_fit_metadata.csv) and
+# computes the S4 -> S6 retention contrasts, the prior sensitivity, the first-session
+# language advantage and the signal-detection contrasts (the header of the R script lists
+# the files). Light, single job; run only after all fitting jobs have completed. The script
+# stops without writing when the results directory holds no fits.
 #
 # Submit AFTER 03 and 04 complete:  sbatch paper_1_transfer/hpc/05_summaries.slurm
 # =============================================================================

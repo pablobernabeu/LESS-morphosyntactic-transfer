@@ -17,18 +17,18 @@
 #SBATCH --mem-per-cpu=48G
 #SBATCH --time=1-00:00:00
 #SBATCH --array=0-5
-#SBATCH -o paper_1_transfer/hpc/logs/01_extract_erp_%a.out
+#SBATCH -o paper_1_transfer/hpc/logs/01_extract_erp_%A_%a.out
 
 source _shared/hpc/arc_env.sh
 set -o errexit
 set -o nounset
 mkdir -p paper_1_transfer/hpc/logs
 
-# Variant extractions (LES_P1_KEEP_MISFILTERED=1) write their own logs so the
+# Variant extractions (LES_P1_EXCLUDE_REPROCESSED=1) write their own logs so the
 # mainline extraction logs are never overwritten by a resubmission. The derived
 # files themselves are tagged by les_p1_cell_rds() in _config.R.
 TAG=""
-[ "${LES_P1_KEEP_MISFILTERED:-0}" = "1" ] && TAG="${TAG}_keepmisfiltered"
+[ "${LES_P1_EXCLUDE_REPROCESSED:-0}" = "1" ] && TAG="${TAG}_exclreproc"
 
 # Array index -> (property macroregion). Order is fixed and documented here so
 # that a given %a always maps to the same cell across resubmissions.
@@ -44,6 +44,6 @@ read -r PROP MACRO <<< "${PARAMS[$SLURM_ARRAY_TASK_ID]}"
 echo "[array ${SLURM_ARRAY_TASK_ID}] property=${PROP} macroregion=${MACRO} | start $(date)"
 
 Rscript "paper_1_transfer/scripts/01_extract_erp_single_trials.R" "${PROP}" "${MACRO}" \
-    > "paper_1_transfer/hpc/logs/01_extract_erp_${PROP}_${MACRO}.Rout" 2>&1
+    > "paper_1_transfer/hpc/logs/01_extract_erp_${PROP}_${MACRO}${TAG}.Rout" 2>&1
 
 echo "[array ${SLURM_ARRAY_TASK_ID}] finished $(date)"

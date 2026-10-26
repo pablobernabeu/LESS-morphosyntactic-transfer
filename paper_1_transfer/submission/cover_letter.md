@@ -9,21 +9,25 @@ morphosyntactic transfer: A Bayesian single-trial ERP study of three grammatical
 properties in two artificial languages", for consideration as a regular article in the
 Journal of Neurolinguistics.
 
-The study tracks electrophysiological and behavioural signatures of three grammatical
-properties as Norwegian–English bilinguals acquired one of two artificial languages over
+The study tracks electrophysiological and behavioural responses to three grammatical
+properties as Norwegian–English bilinguals acquired one of two miniature languages over
 four sessions, from the first post-training session to a retention test after an
-interval without rehearsal. Single-trial ERP amplitudes and judgement accuracy were
-analysed in Bayesian multilevel models with informative priors, and the scalp
-distribution of the grammaticality response was examined with time-resolved multivariate
-decoding. The property whose realisation aligns with the learners' first language, gender
-agreement, produced a grammaticality effect that grew with training and, at retention,
-diverged between the two languages, and it was the only property for which decoding
-separated grammatical from ungrammatical trials. The design speaks directly to the
-disagreement between wholesale and property-by-property accounts of third-language
-transfer, and to the question those accounts leave open, of how transfer consolidates.
-The journal has published the paradigm's closest precedent (González Alonso et al.,
-2020), and the manuscript builds on it with a longitudinal design and single-trial
-modelling.
+interval without rehearsal. The two languages share their grammar and differ in whether
+their words are built on Norwegian or on English. Single-trial ERP amplitudes were
+analysed in Bayesian multilevel models, the judgements in signal-detection terms, and
+the scalp distribution of the grammaticality response with time-resolved multivariate
+decoding. For gender agreement, a property of Norwegian that English lacks, the learners
+of the Norwegian-like language were not more sensitive than the learners of the
+English-like one, in their judgements or in their ERP response, although the ERP effect
+grew with training in both. In the later sessions the learners of the Norwegian-like
+language accepted gender-agreement sentences more readily, ungrammatical ones included, but
+that difference in response criterion did not survive modelling each learner's change in
+criterion, and the manuscript grades it as suggestive. The absence of a sensitivity advantage is what property-by-property accounts of third-language transfer allow and
+what lexically cued wholesale transfer does not, and the manuscript sets out how far the
+design can take that contrast. The journal has published the paradigm's closest
+precedent (González Alonso et al., 2020), and the manuscript builds on it with a
+longitudinal design, single-trial modelling and a signal-detection analysis of the
+judgements.
 
 A companion manuscript reporting the cognitive and resting-state predictors of learning
 in the same sample is under consideration at Bilingualism: Language and Cognition. The

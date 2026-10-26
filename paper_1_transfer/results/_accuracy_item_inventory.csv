@@ -1,0 +1,4 @@
+"grammatical_property","n_trials","n_trials_without_item","n_items","share_items_both_grammaticality","participants_per_item_min","participants_per_item_median","participants_per_item_max","trials_per_item_min","trials_per_item_median","trials_per_item_max"
+"gender_agreement",19486,0,288,1,27,29,31,64,68,71
+"differential_object_marking",13536,0,288,1,22,24,28,45,47.5,49
+"verb_object_number_agreement",8159,0,288,1,17,18,20,26,28.5,30

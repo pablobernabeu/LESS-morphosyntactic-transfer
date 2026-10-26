@@ -24,21 +24,43 @@ the participant-flow, retention and gate tables (`_sample_flow.csv`, `_participa
 `_erp_trial_retention.csv`, `_misfiltered_share.csv`, `_training_gate_flow.csv`), step 1b
 writes the RSVP timing census as one row (`_rsvp_timing.csv`), step 2 writes the accuracy
 screens (`_accuracy_rt_screen.csv`, `_accuracy_sentence_inventory.csv`,
-`_accuracy_input_gaps.csv`), and step 5 writes the pooled convergence, posterior-summary and
-fit-metadata tables, the retention contrasts, the first-session language advantage and the
-prior sensitivity (`_pooled_convergence.csv`, `_pooled_posterior_summaries.csv`,
-`_pooled_fit_metadata.csv`, `_retention_contrasts.csv`,
-`_first_session_language_advantage.csv`, `_prior_sensitivity.csv`) from the fitted `.rds`.
-Steps 7 to 7c write the grand-average waveform and electrode tables, steps 8 and 9 write
-the decoding CSVs, and step 10 writes the literature-trend counts. The light descriptive
-tables of steps 0, 0c and 2 are regenerated on the cluster by
-`../hpc/00_descriptives.slurm`, which runs those three scripts with every variant switch
+`_accuracy_item_inventory.csv`, `_accuracy_input_gaps.csv`), and step 5 writes the pooled
+convergence, posterior-summary and fit-metadata tables, the retention contrasts, the
+first-session language advantage, the prior sensitivity and the accuracy models'
+sensitivity and criterion contrasts (`_pooled_convergence.csv`,
+`_pooled_posterior_summaries.csv`, `_pooled_fit_metadata.csv`, `_retention_contrasts.csv`,
+`_first_session_language_advantage.csv`, `_prior_sensitivity.csv`,
+`_accuracy_sdt_contrasts.csv`) from the fitted `.rds`. Step 3b writes the prior predictive
+check the manuscript's figure is drawn from (`_prior_predictive_check.csv` and its one-row
+record `_prior_predictive_check_meta.csv`), from a prior-only model and no fitted one.
+Step 2 also writes `_accuracy_by_language.csv`, a participant-balanced descriptive table
+for the manuscript's group-separated behavioural figure. Steps 7 to 7c write the
+participant-balanced waveform and electrode tables. Step 7b additionally writes
+`_electrode_window_difference_<property>_<macroregion>.csv`, participant-paired
+ungrammatical-minus-grammatical amplitudes (violation minus control) by miniature
+language, session, electrode and a priori window for the group-separated scalp maps.
+Steps 8 and 9 write the decoding CSVs, and step 10 writes the literature-trend counts. The
+light descriptive tables of steps 0, 0b, 0c and 2 are regenerated on the cluster by
+`../hpc/00_descriptives.slurm`, which runs those four scripts with every variant switch
 unset.
 
-Six files are written into both papers' `results/`, so that the two papers cannot report
-different cohort numbers: step 0 writes `_sample_flow.csv`, `_participants.csv` and
-`_participants_other_languages.csv`, step 0b writes `_participant_matrix.csv` and
-`_flow_inconsistencies.csv`, and step 0d writes `_training_gate_flow.csv`.
+Three files come from checks outside the pipeline, and the manuscript's appendix reads
+them. The trial-loss audit (`../audit/`) writes `_audit_trial_loss.csv` and
+`_audit_export_identity.csv`. The trigger-rule check of Amendment 5
+(`../hpc/00h_submit_trigger_check.sh`) writes `_trigger_check_cells.csv`. It ran on 22
+October 2026.
+
+Eight files are written into both papers' `results/`. Six are the cohort tables, written
+into both so that the two papers cannot report different cohort numbers: step 0 writes
+`_sample_flow.csv`, `_participants.csv` and `_participants_other_languages.csv`, step 0b
+writes `_participant_matrix.csv` and `_flow_inconsistencies.csv`, and step 0d writes
+`_training_gate_flow.csv`. The other two, `_task_durations_home.csv` and
+`_task_durations_lab.csv`, hold the observed home-task and laboratory-phase durations the
+manuscript reports, and no Paper 1 stage writes them. They are produced by
+`../../_shared/R/07_task_durations.R` when Paper 2's step 13 runs
+(`../../paper_2_plasticity/scripts/13_extract_task_durations.R`, submitted as
+`../../paper_2_plasticity/hpc/13_extract_task_durations.slurm`), so rerunning that step is
+what refreshes them.
 
 An earlier marker file, `_exclusions.csv`, has been removed from the working tree.
 Nothing wrote or read it after the exclusion check was rebuilt to key on the per-fit
@@ -65,6 +87,10 @@ recomputed at a higher permutation count on its own; see
 
 None of these files is produced at render time. Run the pipeline (see
 [`../scripts/README.md`](../scripts/README.md) and [`../hpc/README.md`](../hpc/README.md)),
-pull the CSVs back to the rendering box, and re-render. Before the fits are in place, the
+pull the CSVs back to the rendering box, and re-render. `../../_shared/hpc/pull_results.sh`
+reports what differs between the store and this folder; with `LES_PULL_APPLY=1` it copies
+the named files, checks each copy and appends a row per file to `_pulls/pull_log.csv`
+(the store path, the file's modification time on the cluster, its SHA-256 and git blob,
+and when it was pulled), so the log records where every tracked number came from. Before the fits are in place, the
 manuscript prints `*[pending model fit]*` placeholders and a "Reproducible draft" callout,
 which is the intended behaviour.

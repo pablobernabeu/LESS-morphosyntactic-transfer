@@ -358,6 +358,10 @@ return {
         end
       end
 
+      -- LOCAL PATCH (2026-09-07; ISSUES.md X2-01), not upstream apaquarto 5.0.18: each
+      -- author's name is set in bold in the CRediT paragraph, and the role introduction is
+      -- a paragraph of its own above that list (the body:extend below), as the Journal of
+      -- Neurolinguistics' CRediT statement is laid out. Re-apply after updating apaquarto.
       local credit_paragraph = pandoc.Para(pandoc.Str(""))
 
       if byauthor then
@@ -408,6 +412,9 @@ return {
       local corresponding_paragraph = pandoc.Para(pandoc.Str(""))
       local check_corresponding = false
       if meta["author-note"] and meta["author-note"]["correspondence-note"] then
+        -- LOCAL PATCH (2026-09-07; ISSUES.md X2-01), not upstream apaquarto 5.0.18: a
+        -- correspondence note given in the YAML is stringified and used whole, in place of
+        -- the note apaquarto assembles from the first affiliation.
         local correspondence_note = pandoc.utils.stringify(meta["author-note"]["correspondence-note"])
         corresponding_paragraph.content:extend(pandoc.Inlines(correspondence_note))
       else

@@ -33,13 +33,11 @@ read-only contract is enforced at run time by `les_assert_readonly_data()` in
 `_shared/R/03_data_manifest.R`, which stops any script whose write path resolves inside a
 data directory.
 
-**Nothing identifying is here, and that is deliberate.** This repository has no `data/`
-directory. Beyond the size of the recordings, the study ran six sessions with a cohort of
-65, at known sites and on known dates, so the file that links each participant's
-identifiers to the date and time of each session is identifying in combination even though
-it carries no name. That file is not deposited in any public archive. For the same reason
-every derived table published here is screened for fields that would reconstruct session
-timing, and the tables report elapsed durations rather than clock times.
+**This repository holds no participant data.** It has no `data/` directory: the raw
+recordings, the raw task exports and the session logbook are deposited on OSF, at the
+address above. Every derived table published here is screened for fields that would
+reconstruct session timing, and the tables report elapsed durations rather than clock
+times.
 
 What *is* here is everything derived from those recordings that the paper depends on. The
 pooled posterior summaries, the retention contrasts, the convergence diagnostics, the
@@ -61,7 +59,9 @@ Two things are worth knowing before the first run.
 **Do not run `renv::restore()` to render.** `renv.lock` pins the Linux cluster environment
 in which the models were fitted (R 4.5.1, brms 2.23.0, cmdstanr 0.9.0). Rendering happens
 in a different environment by design and needs far less: `rmarkdown`, `knitr`, `here`,
-`dplyr` and `ggplot2`. The project `.Rprofile` activates renv only when both
+`dplyr`, `ggplot2`, `patchwork`, `readr`, `scales` and `tidyselect`, with `mgcv` for the
+scalp maps and `brms` for the table of priors. `paper_1_transfer/README.md` lists the
+versions behind the committed PDF. The project `.Rprofile` activates renv only when both
 `renv/activate.R` and a populated `renv/library/` are present, so a fresh clone stays on
 the system library and renders without any of this getting in the way.
 
@@ -69,9 +69,9 @@ the system library and renders without any of this getting in the way.
 `footnotehyper`, `fontawesome5` and `pdfcol`. The engine is lualatex. `--to apaquarto-html`
 needs none of them and is the quicker way to check a change.
 
-One figure is optional. `depictr` (not on CRAN, `pak::pak('pablobernabeu/depictr')`)
-supplies the theme and the colourblind-safe Okabe–Ito palette. Without it every figure
-still renders, falling back to `theme_minimal()` and hand-coded colours.
+One package is optional. `depictr` (on CRAN, `install.packages("depictr")`) supplies the
+figure theme and the colourblind-safe Okabe–Ito palette. Without it every figure still
+renders, falling back to `theme_minimal()` and hand-coded colours.
 
 ## Re-fitting the models
 
@@ -88,6 +88,16 @@ that run actually loaded, together with the seeds. Where any other account of th
 environment disagrees with that file, the file is right. CmdStan, the GCC toolchain and the
 `CXXFLAGS_OPTIM = -O1` pin are not R packages, so no lockfile can carry them; they are set
 in `_shared/hpc/arc_env.sh` and explained in the runbook.
+
+## Audit trail
+
+`ISSUES.md` is the audit log of the code and the manuscript: every finding of the
+pre-submission audits, with its severity, its fix and its status, including the
+decisions taken after results were seen. The identifiers that code comments cite (for
+example `ISSUES.md G06-03`) resolve there. `CHANGELOG.md` records every change that could
+alter what the compendium produces. Both files cover the two companion papers, and they
+mention material that is not public: the project's private archive and its `data/`
+directory, and an internal handover note, `AUTHOR_TASKS.txt`.
 
 ## The companion paper
 

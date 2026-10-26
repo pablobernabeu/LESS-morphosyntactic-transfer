@@ -3,8 +3,10 @@
 # 07b_grand_average_electrode.slurm -- per-ELECTRODE grand-average ERP extraction
 # One array task per (property x macroregion) = 6 tasks, mirroring 07 exactly (same
 # heavy importer, same memory profile) but keeping the electrode dimension instead of
-# averaging within the nine brain_region clusters. Feeds the interpolated scalp
-# topography figure, which needs the actual sensor positions rather than nine cluster
+# averaging within the nine brain_region clusters. It writes participant-balanced
+# waveforms and participant-paired grammaticality differences by miniature language,
+# session and a priori window. These feed the interpolated, group-separated scalp
+# topography figures, which need the actual sensor positions rather than nine cluster
 # means. Splitting by macroregion (rather than loading all electrodes at once) keeps
 # each task's footprint at 07's proven 192G; the array runs the six loads in parallel,
 # so the split costs no wall-clock.
@@ -24,6 +26,9 @@
 source _shared/hpc/arc_env.sh
 set -o errexit
 set -o nounset
+# The grand averages and topographies are written under fixed names and belong to the primary
+# analysis only, so a robustness shell (LES_P1_EXCLUDE_REPROCESSED=1) must not reach them.
+unset LES_P1_EXCLUDE_REPROCESSED
 mkdir -p paper_1_transfer/hpc/logs
 
 PARAMS=(

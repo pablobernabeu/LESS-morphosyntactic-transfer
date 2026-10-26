@@ -2,9 +2,10 @@
 # =============================================================================
 # 07_grand_average.slurm -- grand-average time-resolved ERP extraction (job array)
 # One array task per (property x macroregion) = 6 tasks. Each loads the full-epoch
-# single-trial data and writes a condition-averaged grand-average CSV, electrodes
-# averaged within the nine brain_region clusters, for the manuscript's waveform and
-# difference-wave figures. Same heavy importer as step 01, so it uses the same generous
+# single-trial data and writes a participant-balanced grand-average CSV by miniature
+# language and session, with electrodes averaged within the nine brain_region clusters,
+# for the manuscript's waveform and difference-wave figures. The configured primary EEG
+# exclusions are applied before aggregation. Same heavy importer as step 01, so it uses the same generous
 # memory. The interpolated scalp topography needs the electrode dimension instead and
 # is fed by 07b_grand_average_electrode.slurm.
 #
@@ -22,6 +23,9 @@
 source _shared/hpc/arc_env.sh
 set -o errexit
 set -o nounset
+# The grand averages and topographies are written under fixed names and belong to the primary
+# analysis only, so a robustness shell (LES_P1_EXCLUDE_REPROCESSED=1) must not reach them.
+unset LES_P1_EXCLUDE_REPROCESSED
 mkdir -p paper_1_transfer/hpc/logs
 
 PARAMS=(

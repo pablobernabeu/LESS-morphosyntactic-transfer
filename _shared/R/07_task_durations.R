@@ -8,106 +8,70 @@
 # ends a phase, and the last phase-specific event ends the final phase in a file.
 #
 # The raw data are read-only.  During local rendering the sparse checkout may omit
-# them, so the reader falls back to the corresponding Git object.  On a full data
-# or cluster checkout the ordinary file path is used instead.
+# them, so the readers fall back to the committed copy through git (les_data_list() and
+# les_data_source() in 03_data_manifest.R).  On a full data or cluster checkout the
+# ordinary file path is used instead.  A folder or file that can be read in neither way,
+# a git call that fails and a participant key that fails its checks all stop the run,
+# so les_write_task_duration_artifacts() never replaces the committed tables with a
+# partial extraction.
+#
+# The lab logs are listed and read through 08_lab_logs.R, the reader the other lab-log
+# scripts share.  Two Session-4 logs (lab IDs 3 and 5) are semicolon-delimited.  The
+# committed _task_durations_lab.csv was built with a comma-only reader, which reads them
+# as one unnamed column, so they contribute no rows; the lab extractor still reads them
+# that way by default, so that a re-run reproduces the reported medians, and warns that
+# they gave no rows.  LES_DURATIONS_SNIFF_DELIM=1 takes each log's delimiter from its
+# header instead and adds their Session-4 rows (ISSUES.md X6-01, awaiting sign-off).
 # =============================================================================
 
 if (!exists("data_path")) {
   source(here::here("_shared", "R", "00_paths.R"))
 }
-if (!exists("cognitive_ef_path")) {
+if (!exists("les_data_list")) {
   source(here::here("_shared", "R", "03_data_manifest.R"))
 }
+if (!exists("les_read_lab_log")) {
+  source(here::here("_shared", "R", "08_lab_logs.R"))
+}
+
+# --- Design of the two tables -----------------------------------------------------
+# The sessions, tasks and phases the tables cover, used by the extractors, the median
+# sentence and the plots alike.  The home tasks are keyed by the stem of their Gorilla
+# export names, which a batch export carries at its start ("Stroop 1.csv") and a named
+# export after the home ID ("qdvg4 Stroop.csv").
+LES_DURATION_HOME_SESSIONS <- c(1L, 5L)
+.les_duration_task_files <- c(stroop = "Stroop", digit_span = "digit span",
+                              asrt = "serial reaction time")
+LES_DURATION_TASK_LABELS <- c(stroop = "Stroop", digit_span = "Digit span", asrt = "ASRT")
+LES_DURATION_LAB_SESSIONS <- c(2L, 3L, 4L, 6L)
+LES_DURATION_PHASE_LABELS <- c(pretraining = "Pretraining", training = "Training",
+                               test = "Test", experiment = "Experiment")
 
 .les_duration_num <- function(x) {
   suppressWarnings(as.numeric(as.character(x)))
 }
 
-.les_duration_rel <- function(...) {
-  # Git uses forward slashes even on Windows.
-  gsub("\\\\", "/", file.path(...))
-}
-
-.les_duration_git_lines <- function(args) {
-  # system2() on Windows does not reliably preserve arguments containing spaces
-  # when it constructs the Git command line; quote those arguments explicitly.
-  git_args <- vapply(c("-C", .les_root, args), function(x) {
-    if (grepl("[[:space:]]", x)) shQuote(x) else x
-  }, character(1))
-  tryCatch(
-    system2("git", git_args, stdout = TRUE, stderr = FALSE),
-    error = function(e) character()
-  )
-}
-
-.les_duration_list <- function(local_dir, rel_dir, pattern) {
-  if (dir.exists(local_dir)) {
-    files <- list.files(local_dir, pattern = pattern, full.names = TRUE,
-                        recursive = FALSE)
-    return(data.frame(path = files,
-                      rel = .les_duration_rel("data", rel_dir, basename(files)),
-                      stringsAsFactors = FALSE))
-  }
-
-  rel_dir <- .les_duration_rel("data", rel_dir)
-  tracked <- .les_duration_git_lines(c("ls-tree", "-r", "--name-only", "HEAD", "--",
-                                       rel_dir))
-  tracked <- tracked[grepl(pattern, basename(tracked), ignore.case = TRUE)]
-  data.frame(path = file.path(.les_root, tracked), rel = tracked,
-             stringsAsFactors = FALSE)
-}
-
-.les_duration_read <- function(path, rel = NULL, cols = NULL) {
-  read_one <- function(file) {
-    if (is.null(cols)) {
-      readr::read_csv(file, show_col_types = FALSE, progress = FALSE,
-                      name_repair = "unique")
-    } else {
-      readr::read_csv(file, col_select = tidyselect::any_of(cols),
-                      show_col_types = FALSE, progress = FALSE,
-                      name_repair = "unique")
-    }
-  }
-  if (file.exists(path)) {
-    return(suppressWarnings(read_one(path)))
-  }
-  if (is.null(rel)) return(NULL)
-  raw <- .les_duration_git_lines(c("show", paste0("HEAD:", rel)))
-  if (!length(raw)) return(NULL)
-  suppressWarnings(read_one(I(paste(raw, collapse = "\n"))))
-}
-
-.les_duration_key <- function() {
-  key <- .les_duration_read(
-    participant_key_csv(),
-    .les_duration_rel("data", "Participant IDs and session progress.csv")
-  )
-  if (is.null(key)) return(NULL)
-  key <- key[, intersect(c("participant_home_ID", "participant_lab_ID", "language"),
-                         names(key)), drop = FALSE]
-  if ("participant_home_ID" %in% names(key)) {
-    key$participant_home_ID <- as.character(key$participant_home_ID)
-  }
-  if ("participant_lab_ID" %in% names(key)) {
-    key$participant_lab_ID <- as.character(key$participant_lab_ID)
-  }
-  unique(key)
+# Read the requested columns of one Gorilla export as text, so that no value is lost to
+# readr's type guessing and the exports bind whatever types their columns would guess.
+.les_duration_read_export <- function(path, cols) {
+  suppressWarnings(readr::read_csv(les_data_source(path),
+                                   col_types = readr::cols(.default = readr::col_character()),
+                                   col_select = tidyselect::any_of(cols),
+                                   show_col_types = FALSE, progress = FALSE,
+                                   name_repair = "unique"))
 }
 
 # Read a task's batch and named exports with the same batch-priority rule as the
 # cognitive-index pipeline.  It prevents a participant present in both export kinds
 # from contributing twice, which matters for a duration based on the first/last event.
-.les_duration_task_raw <- function(files, task_pattern, cols = NULL) {
-  if (!nrow(files)) return(NULL)
-  is_batch <- grepl(paste0("^", task_pattern, " [0-9]+\\.csv$"),
-                    basename(files$rel), ignore.case = TRUE)
-  read_one <- function(i) .les_duration_read(files$path[i], files$rel[i], cols = cols)
-  batch <- if (any(is_batch)) {
-    dplyr::bind_rows(lapply(which(is_batch), read_one))
-  } else NULL
-  named <- if (any(!is_batch)) {
-    dplyr::bind_rows(lapply(which(!is_batch), read_one))
-  } else NULL
+# `files` are the export paths and `task_pattern` the task's file-name stem.  Returns the
+# distinct rows of the requested columns.
+.les_duration_task_raw <- function(files, task_pattern, cols) {
+  is_batch <- grepl(paste0("^", task_pattern, " [0-9]+\\.csv$"), basename(files),
+                    ignore.case = TRUE)
+  read_set <- function(f) dplyr::bind_rows(lapply(f, .les_duration_read_export, cols = cols))
+  batch <- if (any(is_batch)) read_set(files[is_batch]) else NULL
+  named <- if (any(!is_batch)) read_set(files[!is_batch]) else NULL
   if (is.null(batch)) return(dplyr::distinct(named))
   if (is.null(named)) return(dplyr::distinct(batch))
   id <- "Participant Public ID"
@@ -118,31 +82,61 @@ if (!exists("cognitive_ef_path")) {
   dplyr::distinct(dplyr::bind_rows(batch, named))
 }
 
-#' Extract one observed elapsed-time row per enrolled participant, session and task.
-les_extract_home_task_durations <- function(sessions = c(1L, 5L)) {
-  patterns <- c(stroop = "Stroop", digit_span = "digit span",
-                asrt = "serial reaction time")
+# The participant key's lab IDs and mini-language, as character, for the joins below.
+.les_duration_key <- function() {
+  key <- les_participant_key(enrolled_only = TRUE)
+  data.frame(participant_home_ID = key$participant_home_ID,
+             participant_lab_ID = as.character(key$participant_lab_ID),
+             language = key$language, stringsAsFactors = FALSE)
+}
+
+# -----------------------------------------------------------------------------
+# les_extract_home_task_durations()  --  one row per participant, session and task
+# -----------------------------------------------------------------------------
+# `sessions` are the home sessions to read (integer; Sessions 1 and 5 by default). Reads
+# the Gorilla Stroop, digit span and serial reaction time exports of each session from
+# cognitive_ef_path("Session <n>"), keeping only "Participant Public ID", "Event Index"
+# and "UTC Timestamp" (all read as text), and the participant key
+# (les_participant_key()).  Rows with no home ID or no finite timestamp are dropped, and
+# an event repeated across export files (same home ID, Event Index and timestamp) is
+# counted once.  Returns a data frame with columns session (integer), task (factor:
+# stroop, digit_span, asrt), duration_min ((last - first timestamp) / 60000, so idle time
+# is included), n_events (the events behind that duration), participant_lab_ID
+# (character) and language, ordered by session, task and lab ID.  Only participants whose
+# home ID has a lab ID in the key are kept, and the home ID itself is not returned (see
+# the note inside).  Stops when a session folder, a task's exports or their columns are
+# missing.
+les_extract_home_task_durations <- function(sessions = LES_DURATION_HOME_SESSIONS) {
+  cols <- c("Participant Public ID", "Event Index", "UTC Timestamp")
   rows <- list()
-  k <- 0L
   for (session in sessions) {
-    rel_dir <- .les_duration_rel("raw data", "executive functions",
-                                 paste0("Session ", session))
-    local_dir <- cognitive_ef_path(paste0("Session ", session))
-    for (task in names(patterns)) {
-      files <- .les_duration_list(local_dir, rel_dir,
-                                   paste0(patterns[[task]], ".*\\.csv$"))
-      raw <- .les_duration_task_raw(files, patterns[[task]],
-                                    cols = c("Participant Public ID", "UTC Timestamp"))
-      if (is.null(raw) ||
-          !all(c("Participant Public ID", "UTC Timestamp") %in% names(raw))) next
+    dir <- cognitive_ef_path(paste0("Session ", session))
+    for (task in names(.les_duration_task_files)) {
+      files <- les_data_list(dir, paste0(.les_duration_task_files[[task]], ".*\\.csv$"))
+      if (!length(files)) {
+        stop("[durations] no ", task, " export listed for home Session ", session, call. = FALSE)
+      }
+      raw <- .les_duration_task_raw(files, .les_duration_task_files[[task]], cols)
+      if (!all(c("Participant Public ID", "UTC Timestamp") %in% names(raw))) {
+        stop("[durations] the Session ", session, " ", task, " exports lack ",
+             "'Participant Public ID' or 'UTC Timestamp'", call. = FALSE)
+      }
       d <- data.frame(
         participant_home_ID = as.character(raw[["Participant Public ID"]]),
+        event_index = if ("Event Index" %in% names(raw)) as.character(raw[["Event Index"]])
+                      else NA_character_,
         event_ts_ms = .les_duration_num(raw[["UTC Timestamp"]]),
         stringsAsFactors = FALSE
       )
       d <- d[!is.na(d$participant_home_ID) & nzchar(d$participant_home_ID) &
                is.finite(d$event_ts_ms), , drop = FALSE]
-      if (!nrow(d)) next
+      if (!nrow(d)) {
+        stop("[durations] the Session ", session, " ", task, " exports hold no event with ",
+             "a home ID and a timestamp", call. = FALSE)
+      }
+      # Gorilla can log two events in the same millisecond, so an event is identified by
+      # its Event Index as well as its timestamp; an identical event in two exports is
+      # still counted once.
       d <- dplyr::distinct(d)
       one <- dplyr::summarise(
         dplyr::group_by(d, participant_home_ID),
@@ -152,23 +146,27 @@ les_extract_home_task_durations <- function(sessions = c(1L, 5L)) {
       one$duration_min <- (one$end_ms - one$start_ms) / 60000
       one$session <- as.integer(session)
       one$task <- task
-      k <- k + 1L
-      rows[[k]] <- one[, c("participant_home_ID", "session", "task",
-                           "start_ms", "end_ms", "duration_min", "n_events")]
+      # Neither the timestamps (start_ms, end_ms) nor the home ID are carried into the
+      # written table.  The timestamps come from the Gorilla export's "UTC Timestamp"
+      # column, so they are absolute wall-clock times, and the home ID is the export's
+      # own participant key: beside the lab ID, either would let a reader of the
+      # published table find when each participant sat each task, which in a cohort of
+      # this size is re-identifying.  The manuscripts read the difference, which carries
+      # no date.  The lab table keeps its start_ms and end_ms because those are offsets
+      # within a session, not wall-clock times.
+      rows[[length(rows) + 1L]] <- one[, c("participant_home_ID", "session", "task",
+                                           "duration_min", "n_events")]
     }
   }
-  out <- if (length(rows)) dplyr::bind_rows(rows) else data.frame()
-  if (!nrow(out)) return(out)
-  key <- .les_duration_key()
-  if (!is.null(key) && all(c("participant_home_ID", "participant_lab_ID") %in% names(key))) {
-    out <- dplyr::left_join(out, key, by = "participant_home_ID")
-    out <- out[!is.na(out$participant_lab_ID), , drop = FALSE]
-  } else {
-    out$participant_lab_ID <- NA_character_
-    out$language <- NA_character_
-  }
-  out$task <- factor(out$task, levels = names(patterns))
-  out[order(out$session, out$task, out$participant_home_ID), , drop = FALSE]
+  out <- dplyr::bind_rows(rows)
+  if (!nrow(out)) stop("[durations] no home-task duration could be computed", call. = FALSE)
+  out <- dplyr::inner_join(out, .les_duration_key(), by = "participant_home_ID")
+  out$task <- factor(out$task, levels = names(.les_duration_task_files))
+  out <- out[order(out$session, out$task, out$participant_lab_ID),
+             c("session", "task", "duration_min", "n_events", "participant_lab_ID", "language"),
+             drop = FALSE]
+  rownames(out) <- NULL
+  out
 }
 
 .les_duration_phase_start <- c(
@@ -187,6 +185,8 @@ les_extract_home_task_durations <- function(sessions = c(1L, 5L)) {
   experiment  = c("time_experiment_sequence", "time_experiment_end_trigger",
                   "time_stop_recording", "time_end_of_task")
 )
+stopifnot(identical(names(.les_duration_phase_start), names(LES_DURATION_PHASE_LABELS)),
+          identical(names(.les_duration_phase_end), names(LES_DURATION_PHASE_LABELS)))
 
 .les_duration_first <- function(d, col) {
   if (!col %in% names(d)) return(NA_real_)
@@ -204,72 +204,95 @@ les_extract_home_task_durations <- function(sessions = c(1L, 5L)) {
   if (length(x)) max(x) else NA_real_
 }
 
-#' Extract one observed duration row per participant, lab session and phase.
-les_extract_lab_phase_durations <- function(sessions = c(2L, 3L, 4L, 6L)) {
-  rows <- list()
-  k <- 0L
-  phase_order <- names(.les_duration_phase_start)
-  for (session in sessions) {
-    rel_dir <- .les_duration_rel("raw data", "behavioural data from lab sessions",
-                                 paste0("Session ", session))
-    local_dir <- behavioural_lab_path(paste0("Session ", session))
-    files <- .les_duration_list(local_dir, rel_dir, "\\.csv$")
-    if (!nrow(files)) next
-    lab_cols <- unique(c(unname(.les_duration_phase_start),
-                         unlist(.les_duration_phase_end, use.names = FALSE)))
-    for (i in seq_len(nrow(files))) {
-      d <- .les_duration_read(files$path[i], files$rel[i], cols = lab_cols)
-      if (is.null(d) || !nrow(d)) next
-      subject <- sub("^subject-([0-9]+).*$", "\\1", basename(files$rel[i]),
-                     ignore.case = TRUE)
-      if (!grepl("^[0-9]+$", subject) && "subject_nr" %in% names(d)) {
-        subject <- as.character(d$subject_nr[which(is.finite(.les_duration_num(d$subject_nr)))[1]])
-      }
-      if (!grepl("^[0-9]+$", subject)) next
-
-      starts <- vapply(.les_duration_phase_start,
-                       function(col) .les_duration_first(d, col), numeric(1))
-      for (phase in phase_order) {
-        start <- starts[[phase]]
-        if (!is.finite(start)) next
-        idx <- match(phase, phase_order)
-        later <- if (idx < length(phase_order)) starts[(idx + 1L):length(phase_order)] else numeric()
-        later <- later[is.finite(later) & later > start]
-        if (length(later)) {
-          end <- min(later)
-          boundary <- "next phase start"
-        } else {
-          end <- .les_duration_last(d, .les_duration_phase_end[[phase]], after = start)
-          boundary <- "last phase event"
-        }
-        if (!is.finite(end) || end <= start) next
-        k <- k + 1L
-        rows[[k]] <- data.frame(
-          participant_lab_ID = as.character(as.integer(subject)),
-          session = as.integer(session), phase = phase,
-          start_ms = start, end_ms = end,
-          duration_min = (end - start) / 60000,
-          boundary = boundary, source_file = basename(files$rel[i]),
-          stringsAsFactors = FALSE
-        )
-      }
-    }
-  }
-  out <- if (length(rows)) dplyr::bind_rows(rows) else data.frame()
-  if (!nrow(out)) return(out)
-  key <- .les_duration_key()
-  if (!is.null(key) && "participant_lab_ID" %in% names(key)) {
-    key$participant_lab_ID <- as.character(key$participant_lab_ID)
-    out <- dplyr::left_join(out, key, by = "participant_lab_ID")
-  } else {
-    out$participant_home_ID <- NA_character_
-    out$language <- NA_character_
-  }
-  out$phase <- factor(out$phase, levels = phase_order)
-  out[order(out$session, out$phase, out$participant_lab_ID), , drop = FALSE]
+# The delimiter rule of the lab extractor: "," (the rule the committed table was built
+# with) unless LES_DURATIONS_SNIFF_DELIM=1, in which case NULL, so that
+# les_read_lab_log() takes each log's delimiter from its header line.
+.les_duration_lab_delim <- function() {
+  if (identical(Sys.getenv("LES_DURATIONS_SNIFF_DELIM"), "1")) NULL else ","
 }
 
-# Write to both manuscript result folders so either paper can render independently.
+# -----------------------------------------------------------------------------
+# les_extract_lab_phase_durations()  --  one row per participant, lab session and phase
+# -----------------------------------------------------------------------------
+# `sessions` are the lab sessions to read (integer; Sessions 2, 3, 4 and 6 by default).
+# `delim` is the delimiter rule passed to les_read_lab_log(): "," by default, NULL to take
+# each log's delimiter from its header (see the file header and LES_DURATIONS_SNIFF_DELIM).
+# Reads every logfile that les_lab_log_files() lists, split parts included, keeping only
+# the time_ phase markers, and the participant key.  Returns a data frame with columns
+# participant_lab_ID (character, from the file name), session (integer), phase (factor:
+# pretraining, training, test, experiment), start_ms and end_ms (offsets within the
+# session, in ms), duration_min, boundary ("next phase start" or "last phase event"),
+# source_file and language (from the key; NA when the key has no such lab ID), ordered by
+# session, phase and lab ID.  A phase gets a row only when its start marker is present and
+# an end follows it.  Warns, naming them, about logfiles that gave no row, because a
+# silent loss there is how two Session-4 participants went missing (ISSUES.md X6-01).
+les_extract_lab_phase_durations <- function(sessions = LES_DURATION_LAB_SESSIONS,
+                                            delim = .les_duration_lab_delim()) {
+  logs <- les_lab_log_files(sessions)       # warns about names without a lab ID
+  logs <- logs[!is.na(logs$participant_lab_ID), , drop = FALSE]
+  lab_cols <- unique(c(unname(.les_duration_phase_start),
+                       unlist(.les_duration_phase_end, use.names = FALSE)))
+  phase_order <- names(.les_duration_phase_start)
+  rows <- list()
+  no_rows <- character(0)
+  for (i in seq_len(nrow(logs))) {
+    d <- suppressWarnings(les_read_lab_log(logs$path[i], cols = lab_cols, delim = delim))
+    n_before <- length(rows)
+    starts <- vapply(.les_duration_phase_start,
+                     function(col) .les_duration_first(d, col), numeric(1))
+    for (phase in phase_order) {
+      start <- starts[[phase]]
+      if (!is.finite(start)) next
+      idx <- match(phase, phase_order)
+      later <- if (idx < length(phase_order)) starts[(idx + 1L):length(phase_order)] else numeric()
+      later <- later[is.finite(later) & later > start]
+      if (length(later)) {
+        end <- min(later)
+        boundary <- "next phase start"
+      } else {
+        end <- .les_duration_last(d, .les_duration_phase_end[[phase]], after = start)
+        boundary <- "last phase event"
+      }
+      if (!is.finite(end) || end <= start) next
+      rows[[length(rows) + 1L]] <- data.frame(
+        participant_lab_ID = as.character(logs$participant_lab_ID[i]),
+        session = logs$session[i], phase = phase,
+        start_ms = start, end_ms = end,
+        duration_min = (end - start) / 60000,
+        boundary = boundary, source_file = logs$file[i],
+        stringsAsFactors = FALSE
+      )
+    }
+    if (length(rows) == n_before) {
+      no_rows <- c(no_rows, paste0("Session ", logs$session[i], "/", logs$file[i],
+                                   " (read with delimiter '", attr(d, "delim"), "')"))
+    }
+  }
+  if (length(no_rows)) {
+    warning("[durations] ", length(no_rows), " lab logfile(s) gave no phase row: ",
+            paste(no_rows, collapse = ", "),
+            if (identical(delim, ",")) paste0(". A semicolon-delimited log reads as one ",
+              "column under the comma rule; LES_DURATIONS_SNIFF_DELIM=1 reads it.") else ".",
+            call. = FALSE)
+  }
+  out <- dplyr::bind_rows(rows)
+  if (!nrow(out)) stop("[durations] no lab-phase duration could be computed", call. = FALSE)
+  key <- .les_duration_key()[, c("participant_lab_ID", "language")]
+  out <- dplyr::left_join(out, key, by = "participant_lab_ID")
+  out$phase <- factor(out$phase, levels = phase_order)
+  out <- out[order(out$session, out$phase, out$participant_lab_ID), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+# -----------------------------------------------------------------------------
+# les_write_task_duration_artifacts()  --  write both tables into both papers
+# -----------------------------------------------------------------------------
+# Takes no arguments; run by Paper 2's step 13 (13_extract_task_durations.R). Extracts
+# both tables, checks the four target paths with les_assert_readonly_data() and only then
+# writes _task_durations_home.csv and _task_durations_lab.csv into paper1_results() and
+# paper2_results(), overwriting the copies there, so either paper renders on its own.  Any
+# read failure stops the run before the first write.  Returns list(home, lab) invisibly.
 les_write_task_duration_artifacts <- function() {
   home <- les_extract_home_task_durations()
   lab  <- les_extract_lab_phase_durations()
@@ -279,18 +302,44 @@ les_write_task_duration_artifacts <- function() {
     lab  = c(paper1_results("_task_durations_lab.csv"),
              paper2_results("_task_durations_lab.csv"))
   )
-  for (p in c(targets$home, targets$lab)) les_assert_readonly_data(p)
+  les_assert_readonly_data(c(targets$home, targets$lab))
   for (p in targets$home) readr::write_csv(home, p, na = "")
   for (p in targets$lab)  readr::write_csv(lab, p, na = "")
   message(sprintf("[durations] home rows=%d; lab rows=%d", nrow(home), nrow(lab)))
   invisible(list(home = home, lab = lab))
 }
 
-# Inline prose for the main text. Keep the reported medians tied to the same
-# participant-level artefacts used by the figures rather than transcribing them.
+# -----------------------------------------------------------------------------
+# les_task_duration_median_text()  --  the median-duration sentence of both papers
+# -----------------------------------------------------------------------------
+# `home` and `lab` are the two tables as the manuscripts read them from results/ (NULL
+# when absent); `digits` sets the decimals.  Returns one character string for inline use:
+# the sentence, or a placeholder sentence when either table is absent or empty.  The
+# sentence names which phases each lab session recorded, so it is built only when the
+# cells with a finite duration are exactly the ones it describes (every home task in
+# Sessions 1 and 5; all four phases in Sessions 2 and 3; training, test and experiment in
+# Session 4; the experiment in Session 6).  Otherwise it warns and returns a visible
+# pending marker, so a re-extraction that gains or loses a phase cannot print a false
+# statement or "NA min".  The medians are computed over the tables' rows, never typed.
 les_task_duration_median_text <- function(home, lab, digits = 2) {
   if (is.null(home) || !nrow(home) || is.null(lab) || !nrow(lab)) {
     return("Median task and phase durations will be reported once the duration artefacts are available.")
+  }
+  cells <- function(d, by) {
+    ok <- is.finite(.les_duration_num(d$duration_min))
+    sort(unique(paste(d$session[ok], d[[by]][ok])))
+  }
+  named_home <- sort(paste(rep(LES_DURATION_HOME_SESSIONS, each = 3),
+                           rep(names(.les_duration_task_files), 2)))
+  named_lab <- sort(c(paste(2, names(LES_DURATION_PHASE_LABELS)),
+                      paste(3, names(LES_DURATION_PHASE_LABELS)),
+                      paste(4, c("training", "test", "experiment")),
+                      paste(6, "experiment")))
+  if (!identical(cells(home, "task"), named_home) || !identical(cells(lab, "phase"), named_lab)) {
+    warning("les_task_duration_median_text(): the sessions and phases with a recorded ",
+            "duration no longer match those the sentence names; rewrite the sentence.",
+            call. = FALSE)
+    return("*[median durations pending: the recorded sessions and phases have changed]*")
   }
   fmt <- function(x) formatC(stats::median(x[is.finite(x)]),
                               format = "f", digits = digits)
@@ -325,69 +374,98 @@ les_task_duration_median_text <- function(home, lab, digits = 2) {
   )
 }
 
-# Compact ggplot figures used in both manuscripts.  Keeping the geometry here makes
-# the two papers use identical axes, facet order and dispersion summaries.
-les_task_duration_home_plot <- function(data, base_size = 9) {
-  if (is.null(data) || !nrow(data)) {
-    return(ggplot2::ggplot() + ggplot2::theme_void() +
-             ggplot2::annotate("text", x = 0, y = 0,
-                               label = "Home-task duration data pending"))
-  }
-  d <- data |>
-    dplyr::filter(is.finite(duration_min), session %in% c(1, 5)) |>
-    dplyr::mutate(
-      task = factor(task, levels = c("stroop", "digit_span", "asrt"),
-                    labels = c("Stroop", "Digit span", "ASRT")),
-      session = factor(session, levels = c(1, 5),
-                       labels = c("Session 1", "Session 5")))
-  if (!nrow(d)) {
-    return(ggplot2::ggplot() + ggplot2::theme_void() +
-             ggplot2::annotate("text", x = 0, y = 0,
-                               label = "Home-task duration data pending"))
-  }
-  ggplot2::ggplot(d, ggplot2::aes(x = task, y = duration_min)) +
-    ggplot2::geom_boxplot(width = 0.56, linewidth = 0.35, outlier.size = 0.7,
-                          outlier.stroke = 0.2) +
-    ggplot2::scale_x_discrete(drop = FALSE) +
-    ggplot2::scale_y_log10(expand = ggplot2::expansion(mult = c(0.02, 0.08))) +
-    ggplot2::labs(x = NULL, y = "Task duration (minutes; log scale)") +
-    ggplot2::facet_wrap(~ session, nrow = 1, drop = FALSE) +
-    les_theme(base_size) +
-    ggplot2::theme(legend.position = "none",
-                   strip.text = ggplot2::element_text(face = "bold", size = base_size),
-                   axis.text.x = ggplot2::element_text(margin = ggplot2::margin(t = 3)),
-                   plot.margin = ggplot2::margin(4, 8, 4, 8))
+# The two duration figures of both manuscripts. Keeping the geometry here gives the two
+# papers identical axes, facet order and dispersion summaries. Both draw session on x
+# within one panel per task or phase, on a logarithmic duration axis, because the
+# durations span two orders of magnitude between tasks and are right-skewed within them.
+# They call les_theme(), les_placeholder(), les_lab_num() and LES_INK, so
+# 06_manuscript_helpers.R has to be sourced first, and base_size defaults to the
+# manuscripts' LES_FIG_BASE_SIZE.  Each takes the table as the manuscripts read it from
+# results/ (`data`, NULL when absent) and returns a ggplot, or the placeholder when there
+# is nothing to draw; neither writes a file.
+
+# Participants as jittered grey points beneath an unfilled box per session. The jitter
+# is seeded, so the points do not move between renders. `cap` limits the points to the
+# visible range; the boxes are computed over every row, so a value beyond the axis
+# still enters the median, quartiles and whiskers.
+.les_duration_layers <- function(cap = Inf) list(
+  ggplot2::geom_point(data = function(d) d[d$duration_min <= cap, , drop = FALSE],
+                      position = ggplot2::position_jitter(width = 0.13, height = 0,
+                                                          seed = 2026),
+                      shape = 16, size = 0.9, colour = "grey60"),
+  ggplot2::geom_boxplot(width = 0.5, fill = NA, colour = "black", linewidth = 0.4,
+                        median.linewidth = 0.9, staplewidth = 0, outlier.shape = NA))
+
+.les_duration_pending <- function(what) les_placeholder(paste(what, "data pending"))
+
+# The axis limits are fixed so the two papers' figures match. coord_cartesian() drops a
+# point outside them without a warning (and no off-scale marker counts it), so a
+# re-extraction that produced such a duration must say so.
+.les_duration_check_range <- function(x, lo, hi, what) {
+  out <- sum(x < lo | x > hi)
+  if (out > 0)
+    warning(sprintf("%s: %d duration(s) fall outside the axis range %s to %s min and are not drawn as points; widen the limits.",
+                    what, out, format(lo), format(hi)), call. = FALSE)
+  invisible(out)
 }
 
-les_task_duration_lab_plot <- function(data, base_size = 9) {
-  if (is.null(data) || !nrow(data)) {
-    return(ggplot2::ggplot() + ggplot2::theme_void() +
-             ggplot2::annotate("text", x = 0, y = 0,
-                               label = "Lab-phase duration data pending"))
-  }
+# `cap` is the top of the axis, in minutes: durations above it are counted by the marker.
+les_task_duration_home_plot <- function(data, base_size = LES_FIG_BASE_SIZE, cap = 100) {
+  if (is.null(data) || !nrow(data)) return(.les_duration_pending("Home-task duration"))
   d <- data |>
-    dplyr::filter(is.finite(duration_min), session %in% c(2, 3, 4, 6)) |>
+    dplyr::filter(is.finite(duration_min), session %in% LES_DURATION_HOME_SESSIONS) |>
     dplyr::mutate(
-      phase = factor(phase, levels = c("pretraining", "training", "test", "experiment"),
-                     labels = c("Pretraining", "Training", "Test", "Experiment")),
-      session = factor(session, levels = c(2, 3, 4, 6),
-                       labels = c("Session 2", "Session 3", "Session 4", "Session 6")))
-  if (!nrow(d)) {
-    return(ggplot2::ggplot() + ggplot2::theme_void() +
-             ggplot2::annotate("text", x = 0, y = 0,
-                               label = "Lab-phase duration data pending"))
-  }
-  ggplot2::ggplot(d, ggplot2::aes(x = phase, y = duration_min)) +
-    ggplot2::geom_boxplot(width = 0.56, linewidth = 0.35, outlier.size = 0.7,
-                          outlier.stroke = 0.2) +
-    ggplot2::scale_x_discrete(drop = FALSE) +
-    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.02, 0.08))) +
-    ggplot2::labs(x = NULL, y = "Phase duration (minutes)") +
-    ggplot2::facet_wrap(~ session, nrow = 1, drop = FALSE) +
-    les_theme(base_size) +
-    ggplot2::theme(legend.position = "none",
-                   strip.text = ggplot2::element_text(face = "bold", size = base_size),
-                   axis.text.x = ggplot2::element_text(angle = 25, hjust = 1, vjust = 1,
-                                                       margin = ggplot2::margin(t = 3)),
-                   plot.margin = ggplot2::margin(4, 8, 4, 8))
+      task = factor(task, levels = names(LES_DURATION_TASK_LABELS),
+                    labels = unname(LES_DURATION_TASK_LABELS)),
+      session = factor(session, levels = LES_DURATION_HOME_SESSIONS))
+  if (!nrow(d)) return(.les_duration_pending("Home-task duration"))
+  # A few exports contain a multi-hour idle gap. Drawn to scale, those durations would
+  # compress every other point into the bottom of the panel, so they sit beyond the top
+  # of the axis, and a triangle with their number marks each task and session that has
+  # any. The count is computed here, never typed.
+  off <- dplyr::count(d[d$duration_min > cap, , drop = FALSE], task, session, .drop = TRUE)
+  # 2 to 130 min with the default cap; the top leaves room for the marker at cap * 1.18.
+  ylim <- c(2, max(130, cap * 1.3))
+  # Durations above the cap are counted by the marker; only the lower limit can lose one.
+  .les_duration_check_range(d$duration_min[d$duration_min <= cap], ylim[1], cap,
+                            "les_task_duration_home_plot()")
+  ggplot2::ggplot(d, ggplot2::aes(x = session, y = duration_min)) +
+    .les_duration_layers(cap) +
+    ggplot2::geom_point(data = off, ggplot2::aes(x = session, y = cap * 1.18),
+                        inherit.aes = FALSE, shape = 17, size = 1.9, colour = "black") +
+    ggplot2::geom_text(data = off, ggplot2::aes(x = session, y = cap * 1.18, label = n),
+                       inherit.aes = FALSE, hjust = 0, nudge_x = 0.09, colour = LES_INK) +
+    ggplot2::facet_grid(. ~ task) +
+    # No vertical expansion: the limits leave the headroom the off-scale marker needs.
+    ggplot2::scale_y_log10(breaks = c(2, 5, 10, 20, 50, 100), labels = les_lab_num,
+                           expand = c(0, 0)) +
+    ggplot2::coord_cartesian(ylim = ylim) +
+    ggplot2::labs(x = "Session", y = "Duration (min)") +
+    les_theme(base_size, grid = "y") +
+    ggplot2::theme(legend.position = "none")
+}
+
+les_task_duration_lab_plot <- function(data, base_size = LES_FIG_BASE_SIZE) {
+  if (is.null(data) || !nrow(data)) return(.les_duration_pending("Laboratory-phase duration"))
+  d <- data |>
+    dplyr::filter(is.finite(duration_min), session %in% LES_DURATION_LAB_SESSIONS) |>
+    dplyr::mutate(
+      phase = factor(phase, levels = names(LES_DURATION_PHASE_LABELS),
+                     labels = unname(LES_DURATION_PHASE_LABELS)),
+      session = factor(session, levels = LES_DURATION_LAB_SESSIONS))
+  if (!nrow(d)) return(.les_duration_pending("Laboratory-phase duration"))
+  # Pretraining was not recorded at Session 4 and only the experiment phase at Session
+  # 6, so each panel spans only the sessions its phase has; free widths keep one session
+  # step the same physical width in every panel.
+  ylim <- c(0.6, 150)
+  .les_duration_check_range(d$duration_min, ylim[1], ylim[2], "les_task_duration_lab_plot()")
+  ggplot2::ggplot(d, ggplot2::aes(x = session, y = duration_min)) +
+    .les_duration_layers() +
+    ggplot2::facet_grid(. ~ phase, scales = "free_x", space = "free_x") +
+    ggplot2::scale_y_log10(breaks = c(1, 2, 5, 10, 20, 50, 100), labels = les_lab_num,
+                           expand = c(0, 0)) +
+    ggplot2::coord_cartesian(ylim = ylim) +
+    ggplot2::labs(x = "Session", y = "Duration (min)") +
+    les_theme(base_size, grid = "y") +
+    ggplot2::theme(legend.position = "none")
 }

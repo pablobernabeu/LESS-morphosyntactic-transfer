@@ -9,8 +9,9 @@
 # $LES_STORE/paper_1_transfer/results.
 #
 # Resourcing: les_brm() runs LES_CHAINS = 4 chains in parallel, each with
-# LES_THREADS_PER_CHAIN within-chain threads, so --cpus-per-task = 4 * THREADS
-# (Stan reduce_sum; Carpenter et al., 2017, https://doi.org/10.18637/jss.v076.i01).
+# LES_THREADS_PER_CHAIN within-chain threads, so --cpus-per-task = 4 * THREADS (Stan's
+# reduce_sum within-chain parallelisation; Stan User's Guide, "Parallelization", and the
+# brms threading() vignette).
 # The `long` partition is required (its maximum is 30 days, but the default is 1 day,
 # so --time is set explicitly). --mem-per-cpu multiplies by --cpus-per-task, so the
 # request is 8 x 12G = 96 GB per task, ample for the single-trial models.
@@ -24,25 +25,30 @@
 #SBATCH --mem-per-cpu=12G
 #SBATCH --time=5-00:00:00
 #SBATCH --array=0-17
-#SBATCH -o paper_1_transfer/hpc/logs/03_fit_erp_%a.out
+#SBATCH -o paper_1_transfer/hpc/logs/03_fit_erp_%A_%a.out
 
 source _shared/hpc/arc_env.sh
 set -o errexit
 set -o nounset
 mkdir -p paper_1_transfer/hpc/logs
 
-# 4 chains x 2 threads/chain = 8 CPUs (matches --cpus-per-task above).
+# 4 chains x 2 threads/chain = 8 CPUs (matches --cpus-per-task above). The thread count
+# also sets brms's grainsize in the Stan data, so changing it invalidates the cached fits;
+# it is pinned here and not derived from the allocation, and a mismatch is only reported.
 export LES_THREADS_PER_CHAIN=2
+if [ $((4 * LES_THREADS_PER_CHAIN)) -ne "${SLURM_CPUS_PER_TASK:-8}" ]; then
+  echo "WARNING: 4 chains x ${LES_THREADS_PER_CHAIN} threads differs from --cpus-per-task=${SLURM_CPUS_PER_TASK:-?}" >&2
+fi
 
-# Variant fits (LES_P1_RETENTION_FREE=1, LES_P1_ITEM_SLOPE=1, LES_PRIOR_SET=weak,
-# LES_P1_KEEP_MISFILTERED=1) write their own logs so the mainline fit logs are never
-# overwritten by a resubmission. The mis-filter-retained tag comes first, mirroring
-# cell_tag in 03_fit_brms_erp.R.
+# Variant fits (LES_P1_EXCLUDE_REPROCESSED=1, LES_PRIOR_SET=weak, LES_P1_ITEM_SLOPE=1,
+# LES_P1_RETENTION_FREE=1) write their own logs so the mainline fit logs are never
+# overwritten by a resubmission. The tags compose in the order of cell_tag in
+# 03_fit_brms_erp.R, so a log is named like the artefacts it describes.
 TAG=""
-[ "${LES_P1_KEEP_MISFILTERED:-0}" = "1" ] && TAG="${TAG}_keepmisfiltered"
-[ "${LES_P1_RETENTION_FREE:-0}" = "1" ] && TAG="${TAG}_retfree"
-[ "${LES_P1_ITEM_SLOPE:-0}" = "1" ]     && TAG="${TAG}_itemslope"
+[ "${LES_P1_EXCLUDE_REPROCESSED:-0}" = "1" ] && TAG="${TAG}_exclreproc"
 [ "${LES_PRIOR_SET:-informative}" = "weak" ] && TAG="${TAG}_weakprior"
+[ "${LES_P1_ITEM_SLOPE:-0}" = "1" ]     && TAG="${TAG}_itemslope"
+[ "${LES_P1_RETENTION_FREE:-0}" = "1" ] && TAG="${TAG}_retfree"
 
 # Array index -> (property window macroregion). Enumerated property-major, then
 # window, then macroregion, so the mapping is stable across resubmissions.

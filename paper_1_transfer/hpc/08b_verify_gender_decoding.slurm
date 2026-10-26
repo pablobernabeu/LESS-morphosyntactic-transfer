@@ -17,11 +17,15 @@
 # so the outcome does not depend on a login-node process surviving (a watcher in /tmp
 # is node-local and is lost when the login node rotates).
 #
-# SUBMIT (standard QoS). Pass the job being watched; the export is what stops the
-# watcher reporting on a superseded job, with stale artefact dates, while appearing
-# healthy.
-#   sbatch --export=ALL,LES_DECODE_WATCH_JOB=<id>_0 --dependency=afterany:<id>_0 \
+# SUBMIT (standard QoS) to the cluster the decoding job runs on. The afterany dependency
+# and the sacct query below both resolve job IDs only on the cluster the watcher runs on.
+# For a decoding job submitted in the HTC form that the header of 08_decoding.slurm gives:
+#   sbatch --clusters=htc --account=educ-intract \
+#         --export=ALL,LES_DECODE_WATCH_JOB=<id>_0 --dependency=afterany:<id>_0 \
 #         paper_1_transfer/hpc/08b_verify_gender_decoding.slurm
+# For a decoding job on ARC, drop --clusters and --account. Pass the job being watched.
+# The job exits at once without it, and the export is what stops the watcher reporting
+# on a superseded job, with stale artefact dates, while appearing healthy.
 # =============================================================================
 #SBATCH --job-name=p1_verify_decode
 #SBATCH --partition=short
@@ -34,12 +38,28 @@
 source _shared/hpc/arc_env.sh
 # Deliberately no errexit: a missing file is a finding to report, not a reason to abort.
 set -o nounset
+# The status block expands the watched job under nounset, so refuse to start without it,
+# before any status file is opened.
+[ -n "${LES_DECODE_WATCH_JOB:-}" ] || { echo 'LES_DECODE_WATCH_JOB unset' >&2; exit 1; }
 
 # arc_env.sh has changed directory to the code root, so the status file lands beside the
 # repository's top-level files.
 STATUS="${PWD}/GENDER_DECODING_STATUS.txt"
 RES="${LES_STORE}/paper_1_transfer/results"
 PROPS=(gender_agreement differential_object_marking verb_object_number_agreement)
+
+# Every timecourse row must carry the permutation count the decoding job recorded as
+# LES_DECODE_NPERM in _decoding_provenance.csv. Without that record, or when it holds no
+# whole number, the expected count is 1000, the default in 08_decoding.slurm.
+PROV="${RES}/_decoding_provenance.csv"
+EXPECT=""
+EXPECT_SRC="${PROV}"
+if [ -f "${PROV}" ]; then
+    EXPECT=$(awk -F, '{gsub(/["\r]/, "")} $1 == "LES_DECODE_NPERM" {print $2; exit}' "${PROV}")
+fi
+case "${EXPECT}" in
+    ''|*[!0-9]*) EXPECT=1000; EXPECT_SRC="default, no usable ${PROV}" ;;
+esac
 
 {
   echo "gender decoding verification -- written $(date)"
@@ -49,41 +69,54 @@ PROPS=(gender_agreement differential_object_marking verb_object_number_agreement
   sacct -j "${LES_DECODE_WATCH_JOB%%_*}" --format=JobID%18,State%14,ExitCode,Elapsed,End%20 2>&1 | head -12
   echo
   echo "--- gender artefacts (all three must be present) ---"
+  # A time-course assembled early by 09b from the banked confirmatory block carries the full
+  # permutation count without the generalisation files, so READY below also needs all three
+  # files. The count test alone once reported READY on a run stopped at its wall, beside a
+  # line advising the cancellation of the queued resubmission that was to finish it.
+  GENDER_FILES=0
   for suffix in timecourse generalization temporal_generalization; do
       f="${RES}/gender_agreement_decoding_${suffix}.csv"
       if [ -f "${f}" ]; then
           printf '  %-26s rows=%-7s %s\n' "${suffix}" \
               "$(( $(wc -l < "${f}") - 1 ))" "$(date -r "${f}" '+%Y-%m-%d %H:%M')"
+          GENDER_FILES=$(( GENDER_FILES + 1 ))
       else
           printf '  %-26s MISSING\n' "${suffix}"
       fi
   done
   echo
-  echo "--- permutation count per property (n_perm, column 10 of the timecourse CSV) ---"
-  # Every property must read 1000 before the CSVs are pulled back together: the
-  # manuscript reads n_perm out of these files and prints "mixed; re-run incomplete"
+  echo "--- permutation count per property (the n_perm column of each timecourse CSV) ---"
+  echo "expected n_perm: ${EXPECT} (from ${EXPECT_SRC})"
+  # Every property must read the expected count before the CSVs are pulled back together:
+  # the manuscript reads n_perm out of these files and prints "mixed; re-run incomplete"
   # if the three disagree.
   # A property counts as ready only if every row of its timecourse CSV reads exactly
-  # 1000, so a partially rewritten file cannot pass.
+  # that count, so a partially rewritten file cannot pass. The column is located by its
+  # header name, so a reordered CSV is still read correctly.
   READY=0
   for p in "${PROPS[@]}"; do
       f="${RES}/${p}_decoding_timecourse.csv"
       if [ -f "${f}" ]; then
-          v=$(awk -F, 'NR>1{gsub(/"/,""); print $10}' "${f}" | sort -u | tr '\n' ' ')
-          printf '  %-32s %s\n' "${p}" "${v}"
-          [ "${v}" = "1000 " ] && READY=$(( READY + 1 ))
+          v=$(awk -F, 'NR == 1 {for (i = 1; i <= NF; i++) {h = $i; gsub(/"/, "", h); if (h == "n_perm") c = i}; next}
+                       c {gsub(/"/, ""); print $c}' "${f}" | sort -u | tr '\n' ' ')
+          printf '  %-32s %s\n' "${p}" "${v:-<no n_perm column or no rows>}"
+          [ "${v}" = "${EXPECT} " ] && READY=$(( READY + 1 ))
       else
           printf '  %-32s MISSING\n' "${p}"
       fi
   done
   echo
-  echo "properties at n_perm=1000: ${READY} of ${#PROPS[@]}"
-  if [ "${READY}" = "${#PROPS[@]}" ]; then
-      echo "RESULT: READY -- all three properties at n_perm=1000."
+  echo "properties at n_perm=${EXPECT}: ${READY} of ${#PROPS[@]}"
+  if [ "${READY}" = "${#PROPS[@]}" ] && [ "${GENDER_FILES}" = 3 ]; then
+      echo "RESULT: READY -- all three properties at n_perm=${EXPECT}, and gender's three files present."
       echo "Next: pull all three properties' CSVs together (HPC_RUNBOOK.md section 2),"
       echo "re-render both manuscripts, then cancel any superseded decoding job still queued."
+  elif [ "${READY}" = "${#PROPS[@]}" ]; then
+      echo "RESULT: NOT READY -- the counts agree, but gender's run has not written all three files."
+      echo "Its time-course may be the early 09b assembly. A run stopped at its wall resumes from"
+      echo "its banked blocks when resubmitted, so do not cancel a queued gender resubmission."
   else
-      echo "RESULT: NOT READY -- the three properties do not all read n_perm=1000."
+      echo "RESULT: NOT READY -- the three properties do not all read n_perm=${EXPECT}."
       echo "Do not pull piecemeal. Investigate before collecting anything."
   fi
 } > "${STATUS}" 2>&1
