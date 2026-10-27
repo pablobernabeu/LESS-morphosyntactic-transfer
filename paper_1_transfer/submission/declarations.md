@@ -33,7 +33,7 @@ Funding acquisition, Project administration, Supervision, Writing – review & e
 ## Funding
 
 This work was supported by the Research Council of Norway (grant 326487-FORSKER21) and
-by the Comunidad de Madrid (grant 2020-T1/HUM-20037).
+by the Comunidad de Madrid (grant 2020-T1/HUM-20037), both awarded to Jorge González Alonso.
 
 ## Declaration of competing interest
 
@@ -42,14 +42,15 @@ relationships that could have appeared to influence the work reported in this pa
 
 ## Acknowledgements
 
-We thank Mona Kirkness Fossum for advice and assistance with translating materials;
-Gaute Berglund, Anders Gabrielsen and Tekabe Legesse Feleke for advice and assistance
-during session piloting; Teodóra Vékony for advice on the alternating serial reaction
+We thank Mona Kirkness Fossum for assistance with translating materials;
+Gaute Berglund, Anders Gabrielsen and Tekabe Legesse Feleke for assistance with session
+piloting; Teodóra Vékony for advice on the alternating serial reaction
 time task; Björn Lundquist for assistance with implementation in OpenSesame; and
 Antonio Fábregas, Natalia Mitrofanova, Yulia Rodina, Marit Westergaard, Merete
 Anderssen and Fatih Bayram for advice and assistance with the design and translation of
-materials and participant recruitment. Models were fitted on Sigma2 (Norway) and the
-Advanced Research Computing facility of the University of Oxford.
+materials and participant recruitment. We also acknowledge the computing resources
+provided by Sigma2 (Norway) and the Advanced Research Computing facility of the
+University of Oxford, on which the models were fitted.
 
 ## Ethics statement (as in the Method)
 

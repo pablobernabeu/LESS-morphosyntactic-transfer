@@ -14,7 +14,36 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Nothing beyond the entries of 2026-10-26 below, which were written before their commit.
+Nothing beyond the entries of 2026-10-27 below, which were written before their commit.
+
+## 2026-10-27
+
+### Changed
+
+- Every numeric table column of both papers is centred and aligned on the decimal point,
+  under a centred head. `_shared/lua/apa-table-heads.lua` pads each number to the width of
+  its column's widest with invisible copies of the characters it lacks (`\phantom` in the
+  PDF; figure, punctuation and hair spaces in Word, whose Times New Roman widths match
+  them to 0.02 em). The numbers had been set flush right in columns wider than they are,
+  off to the right of their heads (13.5 pt in Paper 1's Table 1), and a pd of ".995" or
+  "> .999" broke the decimal alignment of its column. `les_grid_table()` loses its
+  `decimals` argument, which the filter supersedes, and Paper 2's `.p2_num_align()` marks
+  every column after the text columns as numeric. No value changes.
+- The participant-flow diagrams of both papers (`_shared/R/05_funnel.R`) leave 0.12 in
+  between a section's rule and its boxes, the space above each heading, where they left
+  0.20 in.
+- Paper 1's grand-average and difference-wave figures set their two electrode-cluster
+  blocks further apart (a 12 pt top margin on the lower block, against 4 pt), so the
+  second block's title no longer sits as close to the block above as to its own panels.
+- In the PDFs of both papers and of the supplement, a page holding only floats sets them
+  from its top.
+  LaTeX had centred them vertically, which left Paper 1's Figures 11, 12, E2 and E3,
+  Paper 2's Figures 2 and 3 and Figures S1 to S4 partway down their pages.
+- The supplement's reference list starts on a new page (APA 7, Section 2.12), as the two
+  articles' lists already did.
+- `paper_1_transfer/submission/declarations.md` matches the manuscript again: the funding
+  statement names the grant holder, and the acknowledgements take the wording of the
+  18 September edit.
 
 ## 2026-10-26
 

@@ -123,12 +123,16 @@ les_flow <- function(enrolled, arms, attendance, analysis_arms = NULL,
   add_seg <- function(x, y, xend, yend, arrow = FALSE)
     segs <<- rbind(segs, data.frame(x = x, y = y, xend = xend, yend = yend, arrow = arrow))
   y <- 0.02                        # the cursor runs down the page
+  # The boxes of a section sit as close under its rule as its heading sits under the
+  # section above (head_gap). A wider gap under the rule set the boxes apart from their
+  # own heading.
+  head_gap <- 0.12
   heading <- function(label, first = FALSE) {
-    if (!first) y <<- y + 0.12
+    if (!first) y <<- y + head_gap
     heads <<- rbind(heads, data.frame(y = y, label = label))
     y <<- y + hs + 0.02
     rules <<- c(rules, y)
-    y <<- y + 0.20
+    y <<- y + head_gap
   }
 
   # Enrolment and group assignment.

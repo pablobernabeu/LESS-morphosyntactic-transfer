@@ -286,6 +286,14 @@ format:
           \makeatletter
           \g@addto@macro\@floatboxreset{\centering}
           \makeatother
+          % A page that holds only floats sets them from its top, as a page that
+          % shares a float with text does. LaTeX centres them vertically by default
+          % (\@fptop and \@fpbot both 0pt plus 1fil), which left a figure alone on its
+          % page partway down it.
+          \makeatletter
+          \setlength{\@fptop}{0pt}
+          \setlength{\@fpbot}{0pt plus 1fil}
+          \makeatother
     # cairo_pdf embeds the fonts it uses and renders the Unicode minus, micro and
     # multiplication signs the figures contain; R's default pdf() device references
     # Helvetica without embedding it, which submission systems flag.
@@ -2182,8 +2190,7 @@ prior_width_dev <- function(pattern = "grammaticality", family = "^erp_", tbl = 
 # Vectorised formatter for the posterior-summary tables. Precision is the .les_digits
 # rule applied to every row and the largest result used for the whole table (or for each
 # level of `group`, for a table that mixes model families on different scales), so that
-# decimals are uniform down a column, right alignment is decimal alignment, and a rounded
-# bound can be told from a median. Negatives take the true minus sign (U+2212), which is
+# decimals are uniform down a column and a rounded bound can be told from a median. Negatives take the true minus sign (U+2212), which is
 # also not a break point in LaTeX, so a value is never split as "-" / "0.002". The
 # credible interval comes back as its two limits, `lo` and `hi`, which the tables print
 # as the LL and UL columns. A missing value prints as an em dash, the tables' mark for a
@@ -2396,8 +2403,7 @@ sdt_prob_mn_higher <- function(property, measure, session,
     align    = c("l", rep("r", 8)),
     spanners = list(list(label = "Lateral", cols = 2:5), list(label = "Midline", cols = 6:9)),
     group    = .les_group(as.character(keys$Property)),
-    subgroup = .les_group(as.character(keys$Window), italic = FALSE),
-    decimals = c("Lateral pd", "Midline pd"))
+    subgroup = .les_group(as.character(keys$Window), italic = FALSE))
 }
 
 report_contrast <- function(model_id, which = "overall", tbl = retention_tbl) {
@@ -3605,8 +3611,7 @@ if (!is.null(erp_ret_tbl) && has_knitr && "scope" %in% names(erp_ret_tbl)) {
     les_grid_table(body, header = c("Condition", as.character(sess)),
                    align = c("l", rep("r", length(sess))),
                    spanners = list(list(label = "Session", cols = seq_along(sess) + 1L)),
-                   group = .les_group(as.character(key$Property)),
-                   decimals = as.character(sess))
+                   group = .les_group(as.character(key$Property)))
   } else knitr::asis_output("*Per-condition retention pending.*")
 } else {
   knitr::asis_output("*The per-condition retention table will appear once the trial-retention summary is present.*")
@@ -4402,13 +4407,15 @@ if (length(.next_word_ms) != 1L) .next_word_ms <- NA_real_
 # column strips, so the stack reads as one figure with one y-axis title and one legend,
 # collected at the bottom left (a collected top legend would sit between the first
 # block's title and its strips). The block titles start at the panels, clear of the
-# collected y-axis title, and wrapped column strips sit on the panel edge. The stack
+# collected y-axis title, and wrapped column strips sit on the panel edge. The lower
+# block's top margin (12 pt, against the theme's 4) puts more space between the two blocks
+# than between the rows within a block, so its title opens a second block. The stack
 # itself takes the house theme, which sets the legend's spacing; patchwork would
 # otherwise use ggplot2's default theme for it.
 .erp_stack <- function(upper, lower) {
   upper <- upper + theme(axis.title.x = element_blank(), axis.text.x = element_blank(),
                          axis.ticks.x = element_blank(), strip.text.x = element_text(vjust = 0))
-  lower <- lower + theme(strip.text.x = element_blank())
+  lower <- lower + theme(strip.text.x = element_blank(), plot.margin = margin(12, 8, 4, 4))
   wrap_plots(upper, lower, ncol = 1) +
     plot_layout(guides = "collect", axis_titles = "collect") +
     plot_annotation(theme = les_theme()) &
@@ -6012,8 +6019,7 @@ if (!is.null(sdt_tbl) && has_knitr) {
     spanners = list(list(label = "Sensitivity (*d*~L~)", cols = 2:5),
                     list(label = "Criterion (*c*~L~)", cols = 6:9)),
     group    = .les_group(unname(LES_PROPERTY_LABELS_TABLE[keys$prop])),
-    subgroup = .les_group(keys$block, italic = FALSE),
-    decimals = c("sensitivity pdf", "criterion pdf"))
+    subgroup = .les_group(keys$block, italic = FALSE))
 } else {
   knitr::asis_output("*Signal-detection contrasts will appear here once the summaries have run.*")
 }

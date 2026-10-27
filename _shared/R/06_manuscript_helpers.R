@@ -292,8 +292,10 @@ les_erp_layers <- function(fr, next_word_ms = NA_real_) list(
 # apa-longtable path and Quarto's @tbl- cross-references work unchanged, and both outputs
 # carry the spans: \multicolumn in the PDF's longtable and w:gridSpan in Word, where the
 # header rows also repeat on each page. A pipe table (knitr::kable()) can carry neither.
-# The heads of spanners and of numeric columns are centred by
-# _shared/lua/apa-table-heads.lua, which both papers register as a filter.
+# _shared/lua/apa-table-heads.lua, which both papers and the supplement register as a
+# filter, centres the heads of spanners and of numeric columns. It also pads the numbers
+# of each numeric column to one width and centres them, so that they align on the
+# decimal point under their head, in both outputs.
 #
 # body     data.frame of already-formatted character columns. NA prints as a blank cell
 #          (not applicable by design); pass an em dash for a value expected but not
@@ -301,7 +303,8 @@ les_erp_layers <- function(fr, next_word_ms = NA_real_) list(
 #          a cell holding $...$ maths.
 # header   one column head per column, Markdown allowed ("*Mdn*", "*p*~d~",
 #          "$\\widehat{R}$")
-# align    "l", "r" or "c" per column
+# align    per column, "l" for text, or "r" or "c" for a numeric column, which the filter
+#          centres and aligns on the decimal point (a text cell in it is centred)
 # widths   NULL for the table's natural width, so a small table is not stretched across
 #          the measure; otherwise relative column widths as fractions of the text width
 #          (sum <= 1). Pandoc takes a grid table's widths from its dash counts, and
@@ -311,12 +314,8 @@ les_erp_layers <- function(fr, next_word_ms = NA_real_) list(
 # group    optional character vector, one per row; a full-width group row is inserted
 #          whenever it changes and the first column beneath it is indented
 # subgroup optional second level nested in `group`, indented one step further
-# decimals names of columns padded to a common number of decimals, so that right
-#          alignment is also decimal alignment
 les_grid_table <- function(body, header = names(body), align, widths = NULL,
-                           spanners = NULL, group = NULL, subgroup = NULL,
-                           decimals = character()) {
-  latex <- knitr::is_latex_output()
+                           spanners = NULL, group = NULL, subgroup = NULL) {
   body[] <- lapply(body, function(x) { x <- as.character(x); x[is.na(x)] <- ""; x })
   body[] <- lapply(body, function(x) {
     k <- !grepl("$", x, fixed = TRUE)
@@ -325,20 +324,6 @@ les_grid_table <- function(body, header = names(body), align, widths = NULL,
   })
   nc <- ncol(body)
   stopifnot(length(header) == nc, length(align) == nc)
-  # Pandoc trims trailing Unicode spaces from a cell, and TeX Gyre Termes X has no figure
-  # space, so the PDF pads with \phantom{0} and Word with U+2007 closed by a word joiner
-  # (U+2060), which stops Pandoc trimming the padding.
-  pad_dec <- function(x) {
-    dec <- ifelse(grepl("\\.[0-9]+", x), nchar(sub("^[^.]*\\.([0-9]+).*$", "\\1", x)), 0L)
-    dec[!grepl("[0-9]", x)] <- NA
-    m <- suppressWarnings(max(dec, na.rm = TRUE))
-    if (!is.finite(m)) return(x)
-    k <- !is.na(dec) & dec < m
-    fig <- if (latex) "\\phantom{0}" else intToUtf8(0x2007)
-    x[k] <- paste0(x[k], strrep(fig, m - dec[k]), if (latex) "" else intToUtf8(0x2060))
-    x
-  }
-  for (j in intersect(decimals, names(body))) body[[j]] <- pad_dec(body[[j]])
   # A grid-table cell is block Markdown: a leading "> " opens a block quote (the "> .999"
   # of a capped p_d vanished from the cell in testing), and a leading "#", "+", "*" or "- "
   # starts a heading or a list. Escape them; the no-break space keeps "> .999" together.
